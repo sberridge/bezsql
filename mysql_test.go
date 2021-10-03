@@ -95,7 +95,7 @@ func init() {
 		"first_name":     "Sharon",
 		"surname":        "Pollard",
 		"email":          "shar@pol.com",
-		"gender_id":      1,
+		"gender_id":      2,
 		"date_of_birth":  "1967-03-12 00:00:00",
 		"phone_number":   "076453434553345",
 		"city_id":        1,
@@ -113,7 +113,7 @@ func init() {
 		"first_name":     "Juliet",
 		"surname":        "Jones",
 		"email":          "jules@jones.com",
-		"gender_id":      1,
+		"gender_id":      2,
 		"date_of_birth":  "1985-06-01 00:00:00",
 		"phone_number":   "079874636334544",
 		"city_id":        1,
@@ -163,6 +163,13 @@ func init() {
 	insertGenderDb.Table("genders")
 	insertGenderDb.Insert(map[string]interface{}{
 		"gender": "Male",
+	}, true)
+	insertGenderDb.Save()
+	
+	insertGenderDb, _ = db.Clone()
+	insertGenderDb.Table("genders")
+	insertGenderDb.Insert(map[string]interface{}{
+		"gender": "Female",
 	}, true)
 	insertGenderDb.Save()
 
@@ -562,4 +569,80 @@ func TestSelectWhereNotInList(t *testing.T) {
 	if rowNum != 2 {
 		t.Fatalf("Failed fetching rows, expected 2 got %d", rowNum)
 	}
+}
+
+func TestSelectWhereInSub(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("users")
+	db.Cols([]string{
+		"gender_id",
+	})
+
+	subDb,_ := db.Clone()
+	subDb.Table("genders")
+	subDb.Cols([]string{
+		"id",
+	})
+	subDb.Where("gender","=","Female",true)
+	
+	db.WhereInSub("gender_id",subDb)
+
+	res,closeFunc,_ := db.Fetch()
+	defer closeFunc()
+	rowNum := 0
+	for res.Next() {
+		rowNum++
+		var (
+			gender_id int32
+		)
+		res.Scan(&gender_id)
+		if gender_id != 2 {
+			t.Fatalf("Invalid result returned, expected 2 got %d", gender_id)
+		}
+	}
+	if rowNum == 0 {
+		t.Fatalf("No results found")
+	}
+	
+}
+
+func TestSelectWhereNotInSub(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("users")
+	db.Cols([]string{
+		"gender_id",
+	})
+
+	subDb,_ := db.Clone()
+	subDb.Table("genders")
+	subDb.Cols([]string{
+		"id",
+	})
+	subDb.Where("gender","=","Female",true)
+	
+	db.WhereNotInSub("gender_id",subDb)
+
+	res,closeFunc,_ := db.Fetch()
+	defer closeFunc()
+	rowNum := 0
+	for res.Next() {
+		rowNum++
+		var (
+			gender_id int32
+		)
+		res.Scan(&gender_id)
+		if gender_id != 1 {
+			t.Fatalf("Invalid result returned, expected 1 got %d", gender_id)
+		}
+	}
+	if rowNum == 0 {
+		t.Fatalf("No results found")
+	}
+	
 }
