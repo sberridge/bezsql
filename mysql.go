@@ -363,6 +363,14 @@ func (db *MySQL) And() {
 	db.query.And()
 }
 
+func (db *MySQL) OpenBracket() {
+	db.query.OpenBracket()
+}
+
+func (db *MySQL) CloseBracket() {
+	db.query.CloseBracket()
+}
+
 func (db *MySQL) GenerateSelect() string {
 	var params []interface{}
 	query := "SELECT "

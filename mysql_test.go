@@ -39,6 +39,7 @@ func init() {
 			"`country_id` int NOT NULL,",
 			"`postcode` VARCHAR(100) NOT NULL,",
 			"`street_address` VARCHAR(100) NOT NULL,",
+			"`active` TINYINT(1) DEFAULT 0,",
 			"PRIMARY KEY (`id`)",
 			")",
 			"COLLATE='utf8mb4_general_ci';",
@@ -65,6 +66,7 @@ func init() {
 		"country_id":     1,
 		"postcode":       "DE76 YAS",
 		"street_address": "123 Fake Street",
+		"active":         1,
 	}, true)
 	insertUserDb.Save()
 
@@ -77,11 +79,48 @@ func init() {
 		"email":          nil,
 		"gender_id":      1,
 		"date_of_birth":  "1999-08-27 00:00:00",
-		"phone_number":   "07434534534534",
+		"phone_number":   "07123564334555",
 		"city_id":        1,
 		"country_id":     1,
-		"postcode":       "DE76 YAS",
-		"street_address": "123 Fake Street",
+		"postcode":       "DE71 AXC",
+		"street_address": "14 Boller Road",
+		"active":         0,
+	}, true)
+	insertUserDb.Save()
+
+	insertUserDb, _ = db.Clone()
+	insertUserDb.Table("users")
+	insertUserDb.Insert(map[string]interface{}{
+		"title_id":       1,
+		"first_name":     "Sharon",
+		"surname":        "Pollard",
+		"email":          "shar@pol.com",
+		"gender_id":      1,
+		"date_of_birth":  "1967-03-12 00:00:00",
+		"phone_number":   "076453434553345",
+		"city_id":        1,
+		"country_id":     1,
+		"postcode":       "DE71 AXC",
+		"street_address": "14 Boller Road",
+		"active":         0,
+	}, true)
+	insertUserDb.Save()
+
+	insertUserDb, _ = db.Clone()
+	insertUserDb.Table("users")
+	insertUserDb.Insert(map[string]interface{}{
+		"title_id":       1,
+		"first_name":     "Juliet",
+		"surname":        "Jones",
+		"email":          "jules@jones.com",
+		"gender_id":      1,
+		"date_of_birth":  "1985-06-01 00:00:00",
+		"phone_number":   "079874636334544",
+		"city_id":        1,
+		"country_id":     1,
+		"postcode":       "ST54 POC",
+		"street_address": "1 Everet Avenue",
+		"active":         1,
 	}, true)
 	insertUserDb.Save()
 
@@ -166,6 +205,27 @@ func init() {
 	insertCityDb.Table("cities")
 	insertCityDb.Insert(map[string]interface{}{
 		"city": "Derby",
+	}, true)
+	insertCityDb.Save()
+
+	insertCityDb, _ = db.Clone()
+	insertCityDb.Table("cities")
+	insertCityDb.Insert(map[string]interface{}{
+		"city": "Birmingham",
+	}, true)
+	insertCityDb.Save()
+
+	insertCityDb, _ = db.Clone()
+	insertCityDb.Table("cities")
+	insertCityDb.Insert(map[string]interface{}{
+		"city": "Burton-on-Trent",
+	}, true)
+	insertCityDb.Save()
+
+	insertCityDb, _ = db.Clone()
+	insertCityDb.Table("cities")
+	insertCityDb.Insert(map[string]interface{}{
+		"city": "London",
 	}, true)
 	insertCityDb.Save()
 
@@ -280,7 +340,7 @@ func TestSelect(t *testing.T) {
 		rowNum++
 		res.Scan(&id, &surname)
 	}
-	if rowNum != 2 {
+	if rowNum != 4 {
 		t.Fatalf("Failed fetching rows, expected 2 got %d", rowNum)
 	}
 }
@@ -315,6 +375,50 @@ func TestSelectBasicWhere(t *testing.T) {
 	}
 	if rowNum != 1 {
 		t.Fatalf("Failed fetching rows, expected 1 got %d", rowNum)
+	}
+}
+
+func TestSelectComplexWhere(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("users")
+	db.Cols([]string{
+		"id",
+		"first_name",
+		"active",
+		"date_of_birth",
+	})
+	db.OpenBracket()
+	db.Where("active", "=", 1, true)
+	db.Where("date_of_birth", ">", "1980-01-01 00:00:00", true)
+	db.CloseBracket()
+	db.Or()
+	db.OpenBracket()
+	db.Where("first_name", "=", "Sharon", true)
+	db.CloseBracket()
+	res, close, err := db.Fetch()
+	if err != nil {
+		t.Fatalf("Failed running query, got %s", err.Error())
+	}
+	defer close()
+	rowNum := 0
+	for res.Next() {
+		var (
+			id            int64
+			first_name    string
+			active        bool
+			date_of_birth string
+		)
+		rowNum++
+		res.Scan(&id, &first_name, &active, &date_of_birth)
+		if !((active && date_of_birth > "1980-01-01 00:00:00") || (first_name == "Sharon")) {
+			t.Fatalf("Found invalid rows, should be (active AND date of birth > 1980-01-01) OR (first_name = 'Sharon'), got %v, %s, %s", active, date_of_birth, first_name)
+		}
+	}
+	if rowNum != 3 {
+		t.Fatalf("Failed fetching rows, expected 3 got %d", rowNum)
 	}
 }
 
@@ -383,7 +487,79 @@ func TestSelectWhereNotNull(t *testing.T) {
 			t.Fatal("Failed fetching where not null")
 		}
 	}
-	if rowNum != 1 {
-		t.Fatalf("Failed fetching rows, expected 1 got %d", rowNum)
+	if rowNum != 3 {
+		t.Fatalf("Failed fetching rows, expected 3 got %d", rowNum)
+	}
+}
+
+func TestSelectWhereInList(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("cities")
+	db.Cols([]string{
+		"id",
+		"city",
+	})
+	db.WhereInList("city", []interface{}{
+		"Derby",
+		"Birmingham",
+	}, true)
+	res, close, err := db.Fetch()
+	if err != nil {
+		t.Fatalf("Failed running query, got %s", err.Error())
+	}
+	defer close()
+	rowNum := 0
+	for res.Next() {
+		var (
+			id   int64
+			city string
+		)
+		rowNum++
+		res.Scan(&id, &city)
+		if city != "Derby" && city != "Birmingham" {
+			t.Fatalf("Invalid result returned, got %s", city)
+		}
+	}
+	if rowNum != 2 {
+		t.Fatalf("Failed fetching rows, expected 2 got %d", rowNum)
+	}
+}
+
+func TestSelectWhereNotInList(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("cities")
+	db.Cols([]string{
+		"id",
+		"city",
+	})
+	db.WhereNotInList("city", []interface{}{
+		"Derby",
+		"Birmingham",
+	}, true)
+	res, close, err := db.Fetch()
+	if err != nil {
+		t.Fatalf("Failed running query, got %s", err.Error())
+	}
+	defer close()
+	rowNum := 0
+	for res.Next() {
+		var (
+			id   int64
+			city string
+		)
+		rowNum++
+		res.Scan(&id, &city)
+		if city != "Burton-on-Trent" && city != "London" {
+			t.Fatalf("Invalid result returned, got %s", city)
+		}
+	}
+	if rowNum != 2 {
+		t.Fatalf("Failed fetching rows, expected 2 got %d", rowNum)
 	}
 }

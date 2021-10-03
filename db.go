@@ -38,6 +38,8 @@ type DB interface {
 	WhereNotInSub(field string, subSql DB)
 	Or()
 	And()
+	OpenBracket()
+	CloseBracket()
 	Save() (sql.Result, error)
 	Fetch() (*sql.Rows, context.CancelFunc, error)
 }
