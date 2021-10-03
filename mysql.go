@@ -178,19 +178,6 @@ func (db *MySQL) Connect(databaseName string, config Config) (bool, error) {
 		connections[databaseName] = dbCon
 	}
 
-	/*
-		results, err := dbCon.Query("SELECT * FROM users")
-		if err != nil {
-
-		}
-		for results.Next() {
-			var ue models.UserEntity
-			err = results.Scan(&ue.Id, &ue.Username, &ue.Password, &ue.Email)
-			if err != nil {
-
-			}
-			fmt.Println(ue)
-		} */
 	return true, nil
 }
 
