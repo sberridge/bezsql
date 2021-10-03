@@ -41,11 +41,9 @@ func init() {
 			")",
 			"COLLATE='utf8mb4_general_ci';",
 		}, "")
-		_, closeCreateTable, _ := db.RawNonQuery(createTableQuery, params)
-		defer closeCreateTable()
+		db.RawNonQuery(createTableQuery, params)
 	} else {
-		_, closeTruncate, _ := db.RawNonQuery("TRUNCATE TABLE users;", params)
-		defer closeTruncate()
+		db.RawNonQuery("TRUNCATE TABLE users;", params)
 	}
 
 	insertUserDb, _ := db.Clone()
@@ -63,8 +61,7 @@ func init() {
 		"postcode":       "DE76 YAS",
 		"street_address": "123 Fake Street",
 	}, true)
-	_, closeFunc, _ := insertUserDb.Save()
-	defer closeFunc()
+	insertUserDb.Save()
 
 	insertUserDb, _ = db.Clone()
 	insertUserDb.Table("users")
@@ -81,8 +78,7 @@ func init() {
 		"postcode":       "DE76 YAS",
 		"street_address": "123 Fake Street",
 	}, true)
-	_, closeFunc, _ = insertUserDb.Save()
-	defer closeFunc()
+	insertUserDb.Save()
 
 	if t, err := db.DoesTableExist("titles"); err == nil && !t {
 		createTableQuery := strings.Join([]string{
@@ -93,11 +89,9 @@ func init() {
 			")",
 			"COLLATE='utf8mb4_general_ci';",
 		}, "")
-		_, closeCreateTable, _ := db.RawNonQuery(createTableQuery, params)
-		defer closeCreateTable()
+		db.RawNonQuery(createTableQuery, params)
 	} else {
-		_, closeTruncate, _ := db.RawNonQuery("TRUNCATE TABLE titles;", params)
-		defer closeTruncate()
+		db.RawNonQuery("TRUNCATE TABLE titles;", params)
 	}
 
 	insertTitleDb, _ := db.Clone()
@@ -105,8 +99,7 @@ func init() {
 	insertTitleDb.Insert(map[string]interface{}{
 		"title": "Mr",
 	}, true)
-	_, closeFunc, _ = insertTitleDb.Save()
-	defer closeFunc()
+	insertTitleDb.Save()
 
 	if t, err := db.DoesTableExist("genders"); err == nil && !t {
 		createTableQuery := strings.Join([]string{
@@ -117,11 +110,9 @@ func init() {
 			")",
 			"COLLATE='utf8mb4_general_ci';",
 		}, "")
-		_, closeCreateTable, _ := db.RawNonQuery(createTableQuery, params)
-		defer closeCreateTable()
+		db.RawNonQuery(createTableQuery, params)
 	} else {
-		_, closeTruncate, _ := db.RawNonQuery("TRUNCATE TABLE genders;", params)
-		defer closeTruncate()
+		db.RawNonQuery("TRUNCATE TABLE genders;", params)
 	}
 
 	insertGenderDb, _ := db.Clone()
@@ -129,8 +120,7 @@ func init() {
 	insertGenderDb.Insert(map[string]interface{}{
 		"gender": "Male",
 	}, true)
-	_, closeFunc, _ = insertGenderDb.Save()
-	defer closeFunc()
+	insertGenderDb.Save()
 
 	if t, err := db.DoesTableExist("countries"); err == nil && !t {
 		createTableQuery := strings.Join([]string{
@@ -141,11 +131,9 @@ func init() {
 			")",
 			"COLLATE='utf8mb4_general_ci';",
 		}, "")
-		_, closeCreateTable, _ := db.RawNonQuery(createTableQuery, params)
-		defer closeCreateTable()
+		db.RawNonQuery(createTableQuery, params)
 	} else {
-		_, closeTruncate, _ := db.RawNonQuery("TRUNCATE TABLE countries;", params)
-		defer closeTruncate()
+		db.RawNonQuery("TRUNCATE TABLE countries;", params)
 	}
 
 	insertCountryDb, _ := db.Clone()
@@ -153,8 +141,7 @@ func init() {
 	insertCountryDb.Insert(map[string]interface{}{
 		"country": "United Kingdom",
 	}, true)
-	_, closeFunc, _ = insertCountryDb.Save()
-	defer closeFunc()
+	insertCountryDb.Save()
 
 	if t, err := db.DoesTableExist("cities"); err == nil && !t {
 		createTableQuery := strings.Join([]string{
@@ -165,11 +152,9 @@ func init() {
 			")",
 			"COLLATE='utf8mb4_general_ci';",
 		}, "")
-		_, closeCreateTable, _ := db.RawNonQuery(createTableQuery, params)
-		defer closeCreateTable()
+		db.RawNonQuery(createTableQuery, params)
 	} else {
-		_, closeTruncate, _ := db.RawNonQuery("TRUNCATE TABLE cities;", params)
-		defer closeTruncate()
+		db.RawNonQuery("TRUNCATE TABLE cities;", params)
 	}
 
 	insertCityDb, _ := db.Clone()
@@ -177,8 +162,7 @@ func init() {
 	insertCityDb.Insert(map[string]interface{}{
 		"city": "Derby",
 	}, true)
-	_, closeFunc, _ = insertCityDb.Save()
-	defer closeFunc()
+	insertCityDb.Save()
 
 	if t, err := db.DoesTableExist("user_settings"); err == nil && !t {
 		createTableQuery := strings.Join([]string{
@@ -189,11 +173,9 @@ func init() {
 			")",
 			"COLLATE='utf8mb4_general_ci';",
 		}, "")
-		_, closeCreateTable, _ := db.RawNonQuery(createTableQuery, params)
-		defer closeCreateTable()
+		db.RawNonQuery(createTableQuery, params)
 	} else {
-		_, closeTruncate, _ := db.RawNonQuery("TRUNCATE TABLE user_settings;", params)
-		defer closeTruncate()
+		db.RawNonQuery("TRUNCATE TABLE user_settings;", params)
 	}
 
 	insertUserSettingsDb, _ := db.Clone()
@@ -201,16 +183,14 @@ func init() {
 	insertUserSettingsDb.Insert(map[string]interface{}{
 		"user_id": 1,
 	}, true)
-	_, closeFunc, _ = insertUserSettingsDb.Save()
-	defer closeFunc()
+	insertUserSettingsDb.Save()
 
 	insertUserSettingsDb, _ = db.Clone()
 	insertUserSettingsDb.Table("user_settings")
 	insertUserSettingsDb.Insert(map[string]interface{}{
 		"user_id": 2,
 	}, true)
-	_, closeFunc, _ = insertUserSettingsDb.Save()
-	defer closeFunc()
+	insertUserSettingsDb.Save()
 
 	if t, err := db.DoesTableExist("parties"); err == nil && !t {
 		createTableQuery := strings.Join([]string{
@@ -222,11 +202,9 @@ func init() {
 			")",
 			"COLLATE='utf8mb4_general_ci';",
 		}, "")
-		_, closeCreateTable, _ := db.RawNonQuery(createTableQuery, params)
-		defer closeCreateTable()
+		db.RawNonQuery(createTableQuery, params)
 	} else {
-		_, closeTruncate, _ := db.RawNonQuery("TRUNCATE TABLE parties;", params)
-		defer closeTruncate()
+		db.RawNonQuery("TRUNCATE TABLE parties;", params)
 	}
 
 	insertPartyDb, _ := db.Clone()
@@ -235,8 +213,7 @@ func init() {
 		"date":    "2021-10-01 18:00:00",
 		"city_id": 1,
 	}, true)
-	_, closeFunc, _ = insertPartyDb.Save()
-	defer closeFunc()
+	insertPartyDb.Save()
 
 	if t, err := db.DoesTableExist("party_guests"); err == nil && !t {
 		createTableQuery := strings.Join([]string{
@@ -249,11 +226,9 @@ func init() {
 			")",
 			"COLLATE='utf8mb4_general_ci';",
 		}, "")
-		_, closeCreateTable, _ := db.RawNonQuery(createTableQuery, params)
-		defer closeCreateTable()
+		db.RawNonQuery(createTableQuery, params)
 	} else {
-		_, closeTruncate, _ := db.RawNonQuery("TRUNCATE TABLE party_guests;", params)
-		defer closeTruncate()
+		db.RawNonQuery("TRUNCATE TABLE party_guests;", params)
 	}
 
 	insertGuestDb, _ := db.Clone()
@@ -263,8 +238,7 @@ func init() {
 		"party_id": 1,
 		"accepted": false,
 	}, true)
-	_, closeFunc, _ = insertGuestDb.Save()
-	defer closeFunc()
+	insertGuestDb.Save()
 
 	insertGuestDb, _ = db.Clone()
 	insertGuestDb.Table("party_guests")
@@ -273,8 +247,7 @@ func init() {
 		"party_id": 1,
 		"accepted": false,
 	}, true)
-	_, closeFunc, _ = insertGuestDb.Save()
-	defer closeFunc()
+	insertGuestDb.Save()
 
 }
 

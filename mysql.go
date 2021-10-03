@@ -96,7 +96,7 @@ func (db *MySQL) RawQuery(query string, params []interface{}) (*sql.Rows, contex
 	return db.executeQuery(query)
 }
 
-func (db *MySQL) RawNonQuery(query string, params []interface{}) (sql.Result, context.CancelFunc, error) {
+func (db *MySQL) RawNonQuery(query string, params []interface{}) (sql.Result, error) {
 	db.params = params
 	return db.executeNonQuery(query)
 }
@@ -406,7 +406,7 @@ func (db *MySQL) GenerateUpdate() string {
 	}
 	return query
 }
-func (db *MySQL) Save() (sql.Result, context.CancelFunc, error) {
+func (db *MySQL) Save() (sql.Result, error) {
 	var query string
 	if len(db.insertValues) > 0 {
 		query = db.GenerateInsert()
@@ -432,15 +432,16 @@ func (db *MySQL) executeQuery(query string) (*sql.Rows, context.CancelFunc, erro
 	return results, cancelFunc, nil
 }
 
-func (db *MySQL) executeNonQuery(query string) (sql.Result, context.CancelFunc, error) {
+func (db *MySQL) executeNonQuery(query string) (sql.Result, error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelFunc()
 	con := connections[db.databaseName]
 	results, err := con.ExecContext(ctx, query, db.params...)
 
 	if err != nil {
 		fmt.Println(err)
 		defer cancelFunc()
-		return nil, nil, err
+		return nil, err
 	}
-	return results, cancelFunc, nil
+	return results, nil
 }

@@ -13,7 +13,7 @@ type DB interface {
 	Clone() (DB, error)
 	Table(table string)
 	RawQuery(query string, params []interface{}) (*sql.Rows, context.CancelFunc, error)
-	RawNonQuery(query string, params []interface{}) (sql.Result, context.CancelFunc, error)
+	RawNonQuery(query string, params []interface{}) (sql.Result, error)
 	Insert(values map[string]interface{}, escape bool)
 	Update(values map[string]interface{}, escape bool)
 	Cols(cols []string)
@@ -36,6 +36,6 @@ type DB interface {
 	WhereNotInSub(field string, subSql DB)
 	Or()
 	And()
-	Save() (sql.Result, context.CancelFunc, error)
+	Save() (sql.Result, error)
 	Fetch() (*sql.Rows, context.CancelFunc, error)
 }
