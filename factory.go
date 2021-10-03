@@ -21,7 +21,10 @@ func Open(database string) (DB, error) {
 	dbType := dbConfig.Type
 	if dbType == "MySQL" {
 		db = &MySQL{}
-		db.Connect(database, dbConfig)
+		_, err := db.Connect(database, dbConfig)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return db, nil

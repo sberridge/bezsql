@@ -20,17 +20,23 @@ type join struct {
 }
 
 type MySQL struct {
-	databaseName string
-	usedConfig   Config
-	table        string
-	cols         []string
-	query        Query
-	joins        []join
-	params       []interface{}
+	databaseName  string
+	usedConfig    Config
+	table         string
+	cols          []string
+	query         Query
+	joins         []join
+	params        []interface{}
+	insertValues  []string
+	insertColumns []string
+	updateValues  []string
 }
 
-func (db *MySQL) DoesTableExist(table string) bool {
-	newDb := db.Clone()
+func (db *MySQL) DoesTableExist(table string) (bool, error) {
+	newDb, err := db.Clone()
+	if err != nil {
+		return false, err
+	}
 	config := db.GetConfig()
 	newDb.Table("information_schema.TABLES")
 	newDb.Cols([]string{
@@ -38,20 +44,26 @@ func (db *MySQL) DoesTableExist(table string) bool {
 	})
 	newDb.Where("TABLE_SCHEMA", "=", config.Database, true)
 	newDb.Where("TABLE_NAME", "=", table, true)
-	res, close := newDb.Fetch()
+	res, close, err := newDb.Fetch()
+	if err != nil {
+		return false, err
+	}
 	defer close()
 	for res.Next() {
 		var num int32
 		res.Scan(&num)
 		if num > 0 {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
-func (db *MySQL) DoesColumnExist(table string, field string) bool {
-	newDb := db.Clone()
+func (db *MySQL) DoesColumnExist(table string, field string) (bool, error) {
+	newDb, err := db.Clone()
+	if err != nil {
+		return false, err
+	}
 	config := db.GetConfig()
 	newDb.Table("information_schema.COLUMNS")
 	newDb.Cols([]string{
@@ -60,28 +72,31 @@ func (db *MySQL) DoesColumnExist(table string, field string) bool {
 	newDb.Where("TABLE_SCHEMA", "=", config.Database, true)
 	newDb.Where("TABLE_NAME", "=", table, true)
 	newDb.Where("COLUMN_NAME", "=", field, true)
-	res, close := newDb.Fetch()
+	res, close, err := newDb.Fetch()
+	if err != nil {
+		return false, err
+	}
 	defer close()
 	for res.Next() {
 		var num int32
 		res.Scan(&num)
 		if num > 0 {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 func (db *MySQL) GetConfig() Config {
 	return db.usedConfig
 }
 
-func (db *MySQL) RawQuery(query string, params []interface{}) (*sql.Rows, context.CancelFunc) {
+func (db *MySQL) RawQuery(query string, params []interface{}) (*sql.Rows, context.CancelFunc, error) {
 	db.params = params
 	return db.executeQuery(query)
 }
 
-func (db *MySQL) RawNonQuery(query string, params []interface{}) (sql.Result, context.CancelFunc) {
+func (db *MySQL) RawNonQuery(query string, params []interface{}) (sql.Result, context.CancelFunc, error) {
 	db.params = params
 	return db.executeNonQuery(query)
 }
@@ -138,13 +153,16 @@ func (db *MySQL) Cols(cols []string) {
 	db.cols = escapedCols
 }
 
-func (db *MySQL) Clone() DB {
+func (db *MySQL) Clone() (DB, error) {
 	newDB := MySQL{}
-	newDB.Connect(db.databaseName, db.usedConfig)
-	return &newDB
+	_, err := newDB.Connect(db.databaseName, db.usedConfig)
+	if err != nil {
+		return nil, err
+	}
+	return &newDB, nil
 }
 
-func (db *MySQL) Connect(databaseName string, config Config) bool {
+func (db *MySQL) Connect(databaseName string, config Config) (bool, error) {
 	db.databaseName = databaseName
 	db.usedConfig = config
 	if _, exists := connections[databaseName]; !exists {
@@ -155,7 +173,7 @@ func (db *MySQL) Connect(databaseName string, config Config) bool {
 		mySQLConfig.Addr = fmt.Sprintf("%s:%d", config.Host, config.Port)
 		dbCon, err := sql.Open("mysql", mySQLConfig.FormatDSN())
 		if err != nil {
-			return false
+			return false, err
 		}
 		connections[databaseName] = dbCon
 	}
@@ -173,7 +191,50 @@ func (db *MySQL) Connect(databaseName string, config Config) bool {
 			}
 			fmt.Println(ue)
 		} */
-	return false
+	return true, nil
+}
+
+func (db *MySQL) Insert(values map[string]interface{}, escape bool) {
+	var params []interface{}
+	insertColumns := []string{}
+	insertValues := []string{}
+	if escape {
+		for key, val := range values {
+			insertColumns = append(insertColumns, checkReserved(key))
+			if escape {
+				params = append(params, val)
+				insertValues = append(insertValues, "?")
+			} else {
+				switch v := val.(type) {
+				case string:
+					insertValues = append(insertValues, v)
+				}
+			}
+
+		}
+	}
+	db.params = params
+	db.insertColumns = insertColumns
+	db.insertValues = insertValues
+}
+
+func (db *MySQL) Update(values map[string]interface{}, escape bool) {
+	var params []interface{}
+	updateStrings := []string{}
+
+	for key, val := range values {
+		if escape {
+			params = append(params, val)
+			updateStrings = append(updateStrings, fmt.Sprintf("%s = %s", checkReserved(key), "?"))
+		} else {
+			switch v := val.(type) {
+			case string:
+				updateStrings = append(updateStrings, fmt.Sprintf("%s = %s", checkReserved(key), v))
+			}
+		}
+	}
+	db.params = params
+	db.updateValues = updateStrings
 }
 
 func (db *MySQL) addTableJoin(joinType string, tableName string, primaryKey string, foreignKey string) {
@@ -330,31 +391,56 @@ func (db *MySQL) GenerateSelect() string {
 	db.params = params
 	return query
 }
-
-func (db *MySQL) Fetch() (*sql.Rows, context.CancelFunc) {
+func (db *MySQL) GenerateInsert() string {
+	query := fmt.Sprintf("INSERT INTO %s ", db.table)
+	query += fmt.Sprintf(" (%s) VALUES(%s) ", strings.Join(db.insertColumns, ","), strings.Join(db.insertValues, ","))
+	return query
+}
+func (db *MySQL) GenerateUpdate() string {
+	query := fmt.Sprintf("UPDATE TABLE %s SET ", db.table)
+	query += strings.Join(db.updateValues, ",")
+	if len(db.query.wheres) > 0 {
+		whereStr, newParams := db.query.ApplyWheres()
+		query += fmt.Sprintf(" WHERE %s ", whereStr)
+		db.params = append(db.params, newParams...)
+	}
+	return query
+}
+func (db *MySQL) Save() (sql.Result, context.CancelFunc, error) {
+	var query string
+	if len(db.insertValues) > 0 {
+		query = db.GenerateInsert()
+	} else if len(db.updateValues) > 0 {
+		query = db.GenerateUpdate()
+	}
+	return db.executeNonQuery(query)
+}
+func (db *MySQL) Fetch() (*sql.Rows, context.CancelFunc, error) {
 	return db.executeQuery(db.GenerateSelect())
 }
 
-func (db *MySQL) executeQuery(query string) (*sql.Rows, context.CancelFunc) {
+func (db *MySQL) executeQuery(query string) (*sql.Rows, context.CancelFunc, error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	con := connections[db.databaseName]
 	results, err := con.QueryContext(ctx, query, db.params...)
 
 	if err != nil {
 		fmt.Println(err)
-		panic(err)
+		defer cancelFunc()
+		return nil, nil, err
 	}
-	return results, cancelFunc
+	return results, cancelFunc, nil
 }
 
-func (db *MySQL) executeNonQuery(query string) (sql.Result, context.CancelFunc) {
+func (db *MySQL) executeNonQuery(query string) (sql.Result, context.CancelFunc, error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	con := connections[db.databaseName]
 	results, err := con.ExecContext(ctx, query, db.params...)
 
 	if err != nil {
 		fmt.Println(err)
-		panic(err)
+		defer cancelFunc()
+		return nil, nil, err
 	}
-	return results, cancelFunc
+	return results, cancelFunc, nil
 }
