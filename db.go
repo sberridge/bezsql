@@ -30,6 +30,8 @@ type DB interface {
 	JoinSubQuery(subSql DB, alias string, queryFunc QueryFunc)
 	LeftJoinSubQuery(subSql DB, alias string, queryFunc QueryFunc)
 	Where(field string, comparator string, value interface{}, escape bool)
+	WhereNull(field string)
+	WhereNotNull(field string)
 	WhereInList(field string, values []interface{}, escape bool)
 	WhereNotInList(field string, values []interface{}, escape bool)
 	WhereInSub(field string, subSql DB)

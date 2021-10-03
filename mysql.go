@@ -324,6 +324,14 @@ func (db *MySQL) Where(field string, comparator string, value interface{}, escap
 	db.query.Where(field, comparator, value, escape)
 }
 
+func (db *MySQL) WhereNull(field string) {
+	db.query.WhereNull(field)
+}
+
+func (db *MySQL) WhereNotNull(field string) {
+	db.query.WhereNotNull(field)
+}
+
 func (db *MySQL) addWhereInList(inType string, field string, values []interface{}, escape bool) {
 	if !escape {
 		var escapedValues []interface{}

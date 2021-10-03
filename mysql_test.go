@@ -1,6 +1,8 @@
 package bezsql
 
 import (
+	"database/sql"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -22,14 +24,14 @@ func init() {
 	}
 
 	var params []interface{}
-	if t, err := db.DoesTableExist("users"); err != nil && !t {
+	if t, err := db.DoesTableExist("users"); err == nil && !t {
 		createTableQuery := strings.Join([]string{
 			"CREATE TABLE IF NOT EXISTS `users` (",
 			"`id` INT NOT NULL AUTO_INCREMENT,",
 			"`title_id` INT NOT NULL,",
 			"`first_name` VARCHAR(50) NOT NULL,",
 			"`surname` VARCHAR(50) NOT NULL,",
-			"`email` VARCHAR(200) NOT NULL,",
+			"`email` VARCHAR(200) DEFAULT NULL,",
 			"`gender_id` int NOT NULL,",
 			"`date_of_birth` DATETIME NOT NULL,",
 			"`phone_number` VARCHAR(50) NOT NULL,",
@@ -41,7 +43,10 @@ func init() {
 			")",
 			"COLLATE='utf8mb4_general_ci';",
 		}, "")
-		db.RawNonQuery(createTableQuery, params)
+		_, er := db.RawNonQuery(createTableQuery, params)
+		if er != nil {
+			fmt.Println(er)
+		}
 	} else {
 		db.RawNonQuery("TRUNCATE TABLE users;", params)
 	}
@@ -69,7 +74,7 @@ func init() {
 		"title_id":       1,
 		"first_name":     "Bob",
 		"surname":        "Briar",
-		"email":          "bob@brii.com",
+		"email":          nil,
 		"gender_id":      1,
 		"date_of_birth":  "1999-08-27 00:00:00",
 		"phone_number":   "07434534534534",
@@ -309,6 +314,76 @@ func TestSelectBasicWhere(t *testing.T) {
 		}
 	}
 	if rowNum != 1 {
-		t.Fatalf("Failed fetching rows, expected 2 got %d", rowNum)
+		t.Fatalf("Failed fetching rows, expected 1 got %d", rowNum)
+	}
+}
+
+func TestSelectWhereNull(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("users")
+	db.Cols([]string{
+		"id",
+		"surname",
+		"email",
+	})
+	db.WhereNull("email")
+	res, close, err := db.Fetch()
+	if err != nil {
+		t.Fatalf("Failed running query, got %s", err.Error())
+	}
+	defer close()
+	rowNum := 0
+	for res.Next() {
+		var (
+			id      int64
+			surname string
+			email   sql.NullString
+		)
+		rowNum++
+		res.Scan(&id, &surname, &email)
+		if email.Valid {
+			t.Fatal("Failed fetching where null")
+		}
+	}
+	if rowNum != 1 {
+		t.Fatalf("Failed fetching rows, expected 1 got %d", rowNum)
+	}
+}
+
+func TestSelectWhereNotNull(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("users")
+	db.Cols([]string{
+		"id",
+		"surname",
+		"email",
+	})
+	db.WhereNotNull("email")
+	res, close, err := db.Fetch()
+	if err != nil {
+		t.Fatalf("Failed running query, got %s", err.Error())
+	}
+	defer close()
+	rowNum := 0
+	for res.Next() {
+		var (
+			id      int64
+			surname string
+			email   sql.NullString
+		)
+		rowNum++
+		res.Scan(&id, &surname, &email)
+		if !email.Valid {
+			t.Fatal("Failed fetching where not null")
+		}
+	}
+	if rowNum != 1 {
+		t.Fatalf("Failed fetching rows, expected 1 got %d", rowNum)
 	}
 }
