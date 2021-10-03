@@ -41,5 +41,6 @@ type DB interface {
 	OpenBracket()
 	CloseBracket()
 	Save() (sql.Result, error)
+	Delete() (sql.Result, error)
 	Fetch() (*sql.Rows, context.CancelFunc, error)
 }

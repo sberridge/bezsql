@@ -409,6 +409,17 @@ func (db *MySQL) GenerateUpdate() string {
 	}
 	return query
 }
+
+func (db *MySQL) GenerateDelete() string {
+	query := fmt.Sprintf("DELETE FROM %s ", db.table)
+	if len(db.query.wheres) > 0 {
+		whereStr, newParams := db.query.ApplyWheres()
+		query += fmt.Sprintf(" WHERE %s ", whereStr)
+		db.params = append(db.params, newParams...)
+	}
+	return query
+}
+
 func (db *MySQL) Save() (sql.Result, error) {
 	var query string
 	if len(db.insertValues) > 0 {
@@ -420,6 +431,10 @@ func (db *MySQL) Save() (sql.Result, error) {
 }
 func (db *MySQL) Fetch() (*sql.Rows, context.CancelFunc, error) {
 	return db.executeQuery(db.GenerateSelect())
+}
+
+func (db *MySQL) Delete() (sql.Result, error) {
+	return db.executeNonQuery(db.GenerateDelete())
 }
 
 func (db *MySQL) executeQuery(query string) (*sql.Rows, context.CancelFunc, error) {

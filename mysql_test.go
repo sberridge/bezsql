@@ -646,3 +646,28 @@ func TestSelectWhereNotInSub(t *testing.T) {
 	}
 	
 }
+
+func TestInsertAndDelete(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("cities")
+	db.Insert(map[string]interface{}{
+		"city": "Belper",
+	},true)
+	res,_ := db.Save()
+
+	if r,_ := res.RowsAffected(); r == 0 {
+		t.Fatalf("Record not inserted")
+	} else {
+		id, _ := res.LastInsertId()
+		deleteDb,_ := db.Clone()
+		deleteDb.Table("cities")
+		deleteDb.Where("id","=",id,true)
+		res,_ := deleteDb.Delete()
+		if r,_ := res.RowsAffected(); r != 1 {
+			t.Fatalf("Should have deleted 1 record, actually deleted %d", r)
+		}
+	}
+}
