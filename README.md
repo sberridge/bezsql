@@ -62,7 +62,7 @@ for res.Next() {
 
 ### Adding Conditions
 
-There are a few functions allowing the addition of conditions to a query.
+There are a few methods allowing the addition of conditions to a query.
 
 ```go
 db.Table("users")
