@@ -62,7 +62,7 @@ func init() {
 		"gender_id":      1,
 		"date_of_birth":  "1993-07-12 00:00:00",
 		"phone_number":   "07434534534534",
-		"city_id":        1,
+		"city_id":        3,
 		"country_id":     1,
 		"postcode":       "DE76 YAS",
 		"street_address": "123 Fake Street",
@@ -80,7 +80,7 @@ func init() {
 		"gender_id":      1,
 		"date_of_birth":  "1999-08-27 00:00:00",
 		"phone_number":   "07123564334555",
-		"city_id":        1,
+		"city_id":        4,
 		"country_id":     1,
 		"postcode":       "DE71 AXC",
 		"street_address": "14 Boller Road",
@@ -98,7 +98,7 @@ func init() {
 		"gender_id":      2,
 		"date_of_birth":  "1967-03-12 00:00:00",
 		"phone_number":   "076453434553345",
-		"city_id":        1,
+		"city_id":        2,
 		"country_id":     1,
 		"postcode":       "DE71 AXC",
 		"street_address": "14 Boller Road",
@@ -686,5 +686,32 @@ func TestUpdate(t *testing.T) {
 	res, _ := db.Save()
 	if r, _ := res.RowsAffected(); r != 1 {
 		t.Fatalf("Should have updated 1 record, actually updated %d", r)
+	}
+}
+
+func TestStandardJoin(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("users")
+	db.Cols([]string{
+		"users.city_id",
+		"cities.id",
+	})
+	db.JoinTable("cities", "cities.id", "users.city_id")
+	res, closeFunc, _ := db.Fetch()
+	defer closeFunc()
+	rowNum := 0
+	for res.Next() {
+		rowNum++
+		var (
+			city_id int32
+			id      int32
+		)
+		res.Scan(&city_id, &id)
+		if city_id != id {
+			t.Fatalf("Joined table IDs do not match, got %d and %d", city_id, id)
+		}
 	}
 }
