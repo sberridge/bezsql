@@ -165,7 +165,7 @@ func init() {
 		"gender": "Male",
 	}, true)
 	insertGenderDb.Save()
-	
+
 	insertGenderDb, _ = db.Clone()
 	insertGenderDb.Table("genders")
 	insertGenderDb.Insert(map[string]interface{}{
@@ -581,16 +581,16 @@ func TestSelectWhereInSub(t *testing.T) {
 		"gender_id",
 	})
 
-	subDb,_ := db.Clone()
+	subDb, _ := db.Clone()
 	subDb.Table("genders")
 	subDb.Cols([]string{
 		"id",
 	})
-	subDb.Where("gender","=","Female",true)
-	
-	db.WhereInSub("gender_id",subDb)
+	subDb.Where("gender", "=", "Female", true)
 
-	res,closeFunc,_ := db.Fetch()
+	db.WhereInSub("gender_id", subDb)
+
+	res, closeFunc, _ := db.Fetch()
 	defer closeFunc()
 	rowNum := 0
 	for res.Next() {
@@ -606,7 +606,7 @@ func TestSelectWhereInSub(t *testing.T) {
 	if rowNum == 0 {
 		t.Fatalf("No results found")
 	}
-	
+
 }
 
 func TestSelectWhereNotInSub(t *testing.T) {
@@ -619,16 +619,16 @@ func TestSelectWhereNotInSub(t *testing.T) {
 		"gender_id",
 	})
 
-	subDb,_ := db.Clone()
+	subDb, _ := db.Clone()
 	subDb.Table("genders")
 	subDb.Cols([]string{
 		"id",
 	})
-	subDb.Where("gender","=","Female",true)
-	
-	db.WhereNotInSub("gender_id",subDb)
+	subDb.Where("gender", "=", "Female", true)
 
-	res,closeFunc,_ := db.Fetch()
+	db.WhereNotInSub("gender_id", subDb)
+
+	res, closeFunc, _ := db.Fetch()
 	defer closeFunc()
 	rowNum := 0
 	for res.Next() {
@@ -644,7 +644,7 @@ func TestSelectWhereNotInSub(t *testing.T) {
 	if rowNum == 0 {
 		t.Fatalf("No results found")
 	}
-	
+
 }
 
 func TestInsertAndDelete(t *testing.T) {
@@ -655,19 +655,36 @@ func TestInsertAndDelete(t *testing.T) {
 	db.Table("cities")
 	db.Insert(map[string]interface{}{
 		"city": "Belper",
-	},true)
-	res,_ := db.Save()
+	}, true)
+	res, _ := db.Save()
 
-	if r,_ := res.RowsAffected(); r == 0 {
+	if r, _ := res.RowsAffected(); r == 0 {
 		t.Fatalf("Record not inserted")
 	} else {
 		id, _ := res.LastInsertId()
-		deleteDb,_ := db.Clone()
+		deleteDb, _ := db.Clone()
 		deleteDb.Table("cities")
-		deleteDb.Where("id","=",id,true)
-		res,_ := deleteDb.Delete()
-		if r,_ := res.RowsAffected(); r != 1 {
+		deleteDb.Where("id", "=", id, true)
+		res, _ := deleteDb.Delete()
+		if r, _ := res.RowsAffected(); r != 1 {
 			t.Fatalf("Should have deleted 1 record, actually deleted %d", r)
 		}
+	}
+}
+
+func TestUpdate(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("party_guests")
+	db.Update(map[string]interface{}{
+		"accepted": 1,
+	}, true)
+	db.Where("user_id", "=", 1, true)
+	db.Where("party_id", "=", 1, true)
+	res, _ := db.Save()
+	if r, _ := res.RowsAffected(); r != 1 {
+		t.Fatalf("Should have updated 1 record, actually updated %d", r)
 	}
 }

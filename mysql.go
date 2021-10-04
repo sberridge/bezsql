@@ -400,7 +400,7 @@ func (db *MySQL) GenerateInsert() string {
 	return query
 }
 func (db *MySQL) GenerateUpdate() string {
-	query := fmt.Sprintf("UPDATE TABLE %s SET ", db.table)
+	query := fmt.Sprintf("UPDATE %s SET ", db.table)
 	query += strings.Join(db.updateValues, ",")
 	if len(db.query.wheres) > 0 {
 		whereStr, newParams := db.query.ApplyWheres()
