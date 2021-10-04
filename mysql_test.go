@@ -36,7 +36,7 @@ func init() {
 			"`date_of_birth` DATETIME NOT NULL,",
 			"`phone_number` VARCHAR(50) NOT NULL,",
 			"`city_id` int NOT NULL,",
-			"`country_id` int NOT NULL,",
+			"`country_id` int DEFAULT NULL,",
 			"`postcode` VARCHAR(100) NOT NULL,",
 			"`street_address` VARCHAR(100) NOT NULL,",
 			"`active` TINYINT(1) DEFAULT 0,",
@@ -81,7 +81,7 @@ func init() {
 		"date_of_birth":  "1999-08-27 00:00:00",
 		"phone_number":   "07123564334555",
 		"city_id":        4,
-		"country_id":     1,
+		"country_id":     nil,
 		"postcode":       "DE71 AXC",
 		"street_address": "14 Boller Road",
 		"active":         0,
@@ -318,6 +318,15 @@ func init() {
 		"user_id":  2,
 		"party_id": 1,
 		"accepted": false,
+	}, true)
+	insertGuestDb.Save()
+
+	insertGuestDb, _ = db.Clone()
+	insertGuestDb.Table("party_guests")
+	insertGuestDb.Insert(map[string]interface{}{
+		"user_id":  3,
+		"party_id": 1,
+		"accepted": true,
 	}, true)
 	insertGuestDb.Save()
 
@@ -713,5 +722,123 @@ func TestStandardJoin(t *testing.T) {
 		if city_id != id {
 			t.Fatalf("Joined table IDs do not match, got %d and %d", city_id, id)
 		}
+	}
+	if rowNum == 0 {
+		t.Fatalf("No rows found")
+	}
+}
+
+func TestStandardLeftJoin(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("users")
+	db.Cols([]string{
+		"users.country_id",
+		"countries.id",
+	})
+	db.LeftJoinTable("countries", "countries.id", "users.country_id")
+	res, closeFunc, _ := db.Fetch()
+	defer closeFunc()
+	rowNum := 0
+	foundNull := false
+	for res.Next() {
+		rowNum++
+		var (
+			country_id sql.NullInt32
+			id         sql.NullInt32
+		)
+		res.Scan(&country_id, &id)
+		if country_id.Valid && !id.Valid {
+			t.Fatalf("Found records where id's don't match, found %d and %d", country_id.Int32, id.Int32)
+		}
+		if !id.Valid {
+			foundNull = true
+		}
+	}
+	if !foundNull {
+		t.Fatalf("Did not find record with a null country_id")
+	}
+	if rowNum == 0 {
+		t.Fatalf("No rows found")
+	}
+}
+
+func TestQueryJoin(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("users")
+	db.Cols([]string{
+		"users.id",
+		"users.first_name",
+		"party_guests.accepted",
+		"party_guests.party_id",
+	})
+	db.JoinTableQuery("party_guests", func(q *Query) {
+		q.On("users.id", "=", "party_guests.user_id", false)
+		q.On("party_guests.accepted", "=", 1, true)
+	})
+	res, closeFunc, _ := db.Fetch()
+	defer closeFunc()
+	rowNum := 0
+
+	for res.Next() {
+		rowNum++
+		var (
+			id         int32
+			first_name string
+			accepted   bool
+			party_id   int32
+		)
+		res.Scan(&id, &first_name, &accepted, &party_id)
+		if !accepted {
+			t.Fatalf("Found unaccepted party guest, user %d, party %d", id, party_id)
+		}
+	}
+	if rowNum == 0 {
+		t.Fatalf("No rows found")
+	}
+}
+
+func TestSubJoin(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("users")
+	db.Cols([]string{
+		"users.id",
+		"users.first_name",
+		"g.accepted",
+	})
+	subDb, _ := db.Clone()
+	subDb.Table("party_guests")
+	subDb.Cols([]string{
+		"user_id",
+		"accepted",
+	})
+
+	db.JoinSub(subDb, "g", "users.id", "g.user_id")
+	res, closeFunc, _ := db.Fetch()
+	defer closeFunc()
+	rowNum := 0
+
+	for res.Next() {
+		rowNum++
+		var (
+			id         int32
+			first_name string
+			accepted   bool
+		)
+		res.Scan(&id, &first_name, &accepted)
+		if id == 0 {
+			t.Fatalf("Expected non-zero id, got %d", id)
+		}
+	}
+	if rowNum == 0 {
+		t.Fatalf("No rows found")
 	}
 }
