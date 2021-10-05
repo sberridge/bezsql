@@ -109,7 +109,7 @@ func (db *MySQL) GetParams() []interface{} {
 	return db.params
 }
 
-func checkReserved(word string) string {
+func (db *MySQL) checkReserved(word string) string {
 	reservedWords := []string{
 		"select",
 		"insert",
@@ -148,7 +148,7 @@ func checkReserved(word string) string {
 func (db *MySQL) Cols(cols []string) {
 	escapedCols := []string{}
 	for _, col := range cols {
-		escapedCols = append(escapedCols, checkReserved(col))
+		escapedCols = append(escapedCols, db.checkReserved(col))
 	}
 	db.cols = escapedCols
 }
@@ -187,7 +187,7 @@ func (db *MySQL) Insert(values map[string]interface{}, escape bool) {
 	insertValues := []string{}
 	if escape {
 		for key, val := range values {
-			insertColumns = append(insertColumns, checkReserved(key))
+			insertColumns = append(insertColumns, db.checkReserved(key))
 			if escape {
 				params = append(params, val)
 				insertValues = append(insertValues, "?")
@@ -212,11 +212,11 @@ func (db *MySQL) Update(values map[string]interface{}, escape bool) {
 	for key, val := range values {
 		if escape {
 			params = append(params, val)
-			updateStrings = append(updateStrings, fmt.Sprintf("%s = %s", checkReserved(key), "?"))
+			updateStrings = append(updateStrings, fmt.Sprintf("%s = %s", db.checkReserved(key), "?"))
 		} else {
 			switch v := val.(type) {
 			case string:
-				updateStrings = append(updateStrings, fmt.Sprintf("%s = %s", checkReserved(key), v))
+				updateStrings = append(updateStrings, fmt.Sprintf("%s = %s", db.checkReserved(key), v))
 			}
 		}
 	}
@@ -226,10 +226,10 @@ func (db *MySQL) Update(values map[string]interface{}, escape bool) {
 
 func (db *MySQL) addTableJoin(joinType string, tableName string, primaryKey string, foreignKey string) {
 	q := Query{}
-	q.On(primaryKey, "=", foreignKey, false)
+	q.On(db.checkReserved(primaryKey), "=", db.checkReserved(foreignKey), false)
 	db.joins = append(db.joins, join{
 		Type:  joinType,
-		Table: tableName,
+		Table: db.checkReserved(tableName),
 		Query: q})
 }
 
@@ -243,8 +243,8 @@ func (db *MySQL) LeftJoinTable(tableName string, primaryKey string, foreignKey s
 
 func (db *MySQL) addSubJoin(joinType string, subSql DB, alias string, primaryKey string, foreignKey string) {
 	q := Query{}
-	q.On(primaryKey, "=", foreignKey, false)
-	tableName := fmt.Sprintf("(%s) %s", subSql.GenerateSelect(), alias)
+	q.On(db.checkReserved(primaryKey), "=", db.checkReserved(foreignKey), false)
+	tableName := fmt.Sprintf("(%s) %s", subSql.GenerateSelect(), db.checkReserved(alias))
 	params := subSql.GetParams()
 	db.joins = append(db.joins, join{
 		Type:   joinType,
@@ -268,7 +268,7 @@ func (db *MySQL) addQueryTableJoin(joinType string, tableName string, queryFunc 
 	queryFunc(&q)
 	db.joins = append(db.joins, join{
 		Type:  joinType,
-		Table: tableName,
+		Table: db.checkReserved(tableName),
 		Query: q})
 }
 
@@ -283,7 +283,7 @@ func (db *MySQL) LeftJoinTableQuery(tableName string, queryFunc QueryFunc) {
 func (db *MySQL) addQuerySubJoin(joinType string, subSql DB, alias string, queryFunc QueryFunc) {
 	q := Query{}
 	queryFunc(&q)
-	tableName := fmt.Sprintf("(%s) %s", subSql.GenerateSelect(), alias)
+	tableName := fmt.Sprintf("(%s) %s", subSql.GenerateSelect(), db.checkReserved(alias))
 	params := subSql.GetParams()
 	db.joins = append(db.joins, join{
 		Type:   joinType,
@@ -301,59 +301,39 @@ func (db *MySQL) LeftJoinSubQuery(subSql DB, alias string, queryFunc QueryFunc) 
 }
 
 func (db *MySQL) Where(field string, comparator string, value interface{}, escape bool) {
-	switch v := value.(type) {
-	case string:
-		if !escape {
-			value = checkReserved(v)
-		}
-	}
-
-	db.query.Where(field, comparator, value, escape)
+	db.query.Where(db.checkReserved(field), comparator, value, escape)
 }
 
 func (db *MySQL) WhereNull(field string) {
-	db.query.WhereNull(field)
+	db.query.WhereNull(db.checkReserved(field))
 }
 
 func (db *MySQL) WhereNotNull(field string) {
-	db.query.WhereNotNull(field)
+	db.query.WhereNotNull(db.checkReserved(field))
 }
 
 func (db *MySQL) addWhereInList(inType string, field string, values []interface{}, escape bool) {
-	if !escape {
-		var escapedValues []interface{}
-		for _, value := range values {
-			switch v := value.(type) {
-			case string:
-				escapedValues = append(escapedValues, checkReserved(v))
-			default:
-				escapedValues = append(escapedValues, value)
-			}
-		}
-		values = escapedValues
-	}
 	if inType == "in" {
-		db.query.WhereInList(field, values, escape)
+		db.query.WhereInList(db.checkReserved(field), values, escape)
 	} else {
-		db.query.WhereNotInList(field, values, escape)
+		db.query.WhereNotInList(db.checkReserved(field), values, escape)
 	}
-
 }
 
 func (db *MySQL) WhereInList(field string, values []interface{}, escape bool) {
-	db.addWhereInList("in", field, values, escape)
+	db.addWhereInList("in", db.checkReserved(field), values, escape)
 }
 
 func (db *MySQL) WhereNotInList(field string, values []interface{}, escape bool) {
-	db.addWhereInList("not in", field, values, escape)
+	db.addWhereInList("not in", db.checkReserved(field), values, escape)
 }
 
 func (db *MySQL) WhereInSub(field string, subSql DB) {
-	db.query.WhereInSub(field, subSql)
+	db.query.WhereInSub(db.checkReserved(field), subSql)
 }
 
 func (db *MySQL) WhereNotInSub(field string, subSql DB) {
-	db.query.WhereNotInSub(field, subSql)
+	db.query.WhereNotInSub(db.checkReserved(field), subSql)
 }
 
 func (db *MySQL) Or() {
