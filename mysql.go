@@ -373,8 +373,11 @@ func (db *MySQL) OrderBy(field string, direction string) {
 
 }
 
-func (db *MySQL) GroupBy(field string) {
-	db.groupColumns = append(db.groupColumns, db.checkReserved(field))
+func (db *MySQL) GroupBy(field ...string) {
+	for _, f := range field {
+		db.groupColumns = append(db.groupColumns, db.checkReserved(f))
+	}
+
 }
 
 func (db *MySQL) GenerateSelect() string {

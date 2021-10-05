@@ -42,7 +42,7 @@ type DB interface {
 	OpenBracket()
 	CloseBracket()
 	OrderBy(field string, direction string)
-	GroupBy(field string)
+	GroupBy(field ...string)
 	Save() (sql.Result, error)
 	Delete() (sql.Result, error)
 	Fetch() (*sql.Rows, context.CancelFunc, error)
