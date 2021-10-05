@@ -19,6 +19,11 @@ type join struct {
 	Params []interface{}
 }
 
+type orderBy struct {
+	Field     string
+	Direction string
+}
+
 type MySQL struct {
 	databaseName  string
 	usedConfig    Config
@@ -30,6 +35,7 @@ type MySQL struct {
 	insertValues  []string
 	insertColumns []string
 	updateValues  []string
+	ordering      []orderBy
 }
 
 func (db *MySQL) DoesTableExist(table string) (bool, error) {
@@ -351,6 +357,17 @@ func (db *MySQL) CloseBracket() {
 	db.query.CloseBracket()
 }
 
+func (db *MySQL) OrderBy(field string, direction string) {
+	direction = strings.ToUpper(direction)
+	if direction == "ASC" || direction == "DESC" {
+		db.ordering = append(db.ordering, orderBy{
+			Field:     db.checkReserved(field),
+			Direction: direction,
+		})
+	}
+
+}
+
 func (db *MySQL) GenerateSelect() string {
 	var params []interface{}
 	query := "SELECT "
@@ -371,6 +388,16 @@ func (db *MySQL) GenerateSelect() string {
 		params = newParams
 		query += " WHERE " + whereString
 	}
+
+	if len(db.ordering) > 0 {
+		query += " ORDER BY "
+		orderStrings := []string{}
+		for _, o := range db.ordering {
+			orderStrings = append(orderStrings, fmt.Sprintf("%s %s", o.Field, o.Direction))
+		}
+		query += strings.Join(orderStrings, ", ")
+	}
+
 	db.params = params
 	return query
 }

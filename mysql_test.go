@@ -842,3 +842,26 @@ func TestSubJoin(t *testing.T) {
 		t.Fatalf("No rows found")
 	}
 }
+
+func TestOrdering(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("users")
+	db.Cols([]string{
+		"first_name",
+	})
+	db.OrderBy("first_name", "ASC")
+	res, closeFunc, _ := db.Fetch()
+	defer closeFunc()
+	prevStr := ""
+	for res.Next() {
+		var first_name string
+		res.Scan(&first_name)
+		if first_name < prevStr {
+			t.Fatalf("String should be lower than previous, got %s and %s", first_name, prevStr)
+		}
+		prevStr = first_name
+	}
+}

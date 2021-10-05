@@ -40,6 +40,7 @@ type DB interface {
 	And()
 	OpenBracket()
 	CloseBracket()
+	OrderBy(field string, direction string)
 	Save() (sql.Result, error)
 	Delete() (sql.Result, error)
 	Fetch() (*sql.Rows, context.CancelFunc, error)
