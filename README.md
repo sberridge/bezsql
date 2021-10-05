@@ -86,4 +86,16 @@ db.WhereInList("field3",[]interface{}{
     "val1",
     "val2",
 }, true) // WHERE field3 IN (?,?)
+
+// clone to quickly create new query on the same database
+subWhereInDb := db.Clone()
+subWhereInDb.Table("user_posts")
+subWhereInDb.Cols([]string{
+    subWhereInDb.Count("id", "number"),
+    "user_id",
+})
+subWhereInDb.GroupBy("user_id")
+
+// field, value list, parametize values
+db.WhereInSub("field3",subWhereInDb) // WHERE field3 IN (SELECT ...)
 ```

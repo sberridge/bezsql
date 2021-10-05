@@ -865,3 +865,25 @@ func TestOrdering(t *testing.T) {
 		prevStr = first_name
 	}
 }
+
+func TestGrouping(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("party_guests")
+	db.Cols([]string{
+		db.Count("id", "number"),
+		"user_id",
+	})
+	db.GroupBy("user_id")
+	res, closeFunc, _ := db.Fetch()
+	defer closeFunc()
+	for res.Next() {
+		var (
+			number  int32
+			user_id int32
+		)
+		res.Scan(&number, &user_id)
+	}
+}

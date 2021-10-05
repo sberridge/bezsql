@@ -17,6 +17,7 @@ type DB interface {
 	Insert(values map[string]interface{}, escape bool)
 	Update(values map[string]interface{}, escape bool)
 	Cols(cols []string)
+	Count(col string, alias string) string
 	GetParams() []interface{}
 	GenerateSelect() string
 	GenerateInsert() string
@@ -41,6 +42,7 @@ type DB interface {
 	OpenBracket()
 	CloseBracket()
 	OrderBy(field string, direction string)
+	GroupBy(field string)
 	Save() (sql.Result, error)
 	Delete() (sql.Result, error)
 	Fetch() (*sql.Rows, context.CancelFunc, error)

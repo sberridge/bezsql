@@ -36,6 +36,7 @@ type MySQL struct {
 	insertColumns []string
 	updateValues  []string
 	ordering      []orderBy
+	groupColumns  []string
 }
 
 func (db *MySQL) DoesTableExist(table string) (bool, error) {
@@ -157,6 +158,10 @@ func (db *MySQL) Cols(cols []string) {
 		escapedCols = append(escapedCols, db.checkReserved(col))
 	}
 	db.cols = escapedCols
+}
+
+func (db *MySQL) Count(col string, alias string) string {
+	return fmt.Sprintf("COUNT(%s) %s", db.checkReserved(col), db.checkReserved(alias))
 }
 
 func (db *MySQL) Clone() (DB, error) {
@@ -368,6 +373,10 @@ func (db *MySQL) OrderBy(field string, direction string) {
 
 }
 
+func (db *MySQL) GroupBy(field string) {
+	db.groupColumns = append(db.groupColumns, db.checkReserved(field))
+}
+
 func (db *MySQL) GenerateSelect() string {
 	var params []interface{}
 	query := "SELECT "
@@ -396,6 +405,11 @@ func (db *MySQL) GenerateSelect() string {
 			orderStrings = append(orderStrings, fmt.Sprintf("%s %s", o.Field, o.Direction))
 		}
 		query += strings.Join(orderStrings, ", ")
+	}
+
+	if len(db.groupColumns) > 0 {
+		query += fmt.Sprintf(" GROUP BY %s", strings.Join(db.groupColumns, ","))
+
 	}
 
 	db.params = params
