@@ -29,7 +29,7 @@ func ConcurrentFetch(queries ...DB) (results []ConcurrentFetchResult) {
 		c <- cr
 	}
 
-	for i, _ := range queries {
+	for i := range queries {
 		go doFetch(i)
 	}
 
