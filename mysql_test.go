@@ -52,76 +52,29 @@ func init() {
 		db.RawNonQuery("TRUNCATE TABLE users;", params)
 	}
 
+	users := [][]interface{}{
+		{1, "Steve", "Berridge", "ste@ber.com", 1, "1993-07-12 00:00:00", "07434534534534", 3, 1, "DE76 YAS", "123 Fake Street", 1},
+		{1, "Bob", "Briar", nil, 1, "1999-08-27 00:00:00", "07123564334555", 4, nil, "DE71 AXC", "14 Boller Road", 0},
+		{1, "Sharon", "Pollard", "shar@pol.com", 2, "1967-03-12 00:00:00", "076453434553345", 2, 1, "DE71 AXC", "14 Boller Road", 0},
+		{1, "Juliet", "Jones", "jules@jones.com", 2, "1985-06-01 00:00:00", "079874636334544", 1, 1, "ST54 POC", "1 Everet Avenue", 1},
+	}
+
 	insertUserDb, _ := db.Clone()
 	insertUserDb.Table("users")
-	insertUserDb.Insert(map[string]interface{}{
-		"title_id":       1,
-		"first_name":     "Steve",
-		"surname":        "Berridge",
-		"email":          "ste@ber.com",
-		"gender_id":      1,
-		"date_of_birth":  "1993-07-12 00:00:00",
-		"phone_number":   "07434534534534",
-		"city_id":        3,
-		"country_id":     1,
-		"postcode":       "DE76 YAS",
-		"street_address": "123 Fake Street",
-		"active":         1,
-	}, true)
-	insertUserDb.Save()
-
-	insertUserDb, _ = db.Clone()
-	insertUserDb.Table("users")
-	insertUserDb.Insert(map[string]interface{}{
-		"title_id":       1,
-		"first_name":     "Bob",
-		"surname":        "Briar",
-		"email":          nil,
-		"gender_id":      1,
-		"date_of_birth":  "1999-08-27 00:00:00",
-		"phone_number":   "07123564334555",
-		"city_id":        4,
-		"country_id":     nil,
-		"postcode":       "DE71 AXC",
-		"street_address": "14 Boller Road",
-		"active":         0,
-	}, true)
-	insertUserDb.Save()
-
-	insertUserDb, _ = db.Clone()
-	insertUserDb.Table("users")
-	insertUserDb.Insert(map[string]interface{}{
-		"title_id":       1,
-		"first_name":     "Sharon",
-		"surname":        "Pollard",
-		"email":          "shar@pol.com",
-		"gender_id":      2,
-		"date_of_birth":  "1967-03-12 00:00:00",
-		"phone_number":   "076453434553345",
-		"city_id":        2,
-		"country_id":     1,
-		"postcode":       "DE71 AXC",
-		"street_address": "14 Boller Road",
-		"active":         0,
-	}, true)
-	insertUserDb.Save()
-
-	insertUserDb, _ = db.Clone()
-	insertUserDb.Table("users")
-	insertUserDb.Insert(map[string]interface{}{
-		"title_id":       1,
-		"first_name":     "Juliet",
-		"surname":        "Jones",
-		"email":          "jules@jones.com",
-		"gender_id":      2,
-		"date_of_birth":  "1985-06-01 00:00:00",
-		"phone_number":   "079874636334544",
-		"city_id":        1,
-		"country_id":     1,
-		"postcode":       "ST54 POC",
-		"street_address": "1 Everet Avenue",
-		"active":         1,
-	}, true)
+	insertUserDb.InsertMulti([]string{
+		"title_id",
+		"first_name",
+		"surname",
+		"email",
+		"gender_id",
+		"date_of_birth",
+		"phone_number",
+		"city_id",
+		"country_id",
+		"postcode",
+		"street_address",
+		"active",
+	}, users, true)
 	insertUserDb.Save()
 
 	if t, err := db.DoesTableExist("titles"); err == nil && !t {
@@ -159,18 +112,16 @@ func init() {
 		db.RawNonQuery("TRUNCATE TABLE genders;", params)
 	}
 
+	genders := [][]interface{}{
+		{"Male"},
+		{"Female"},
+	}
+
 	insertGenderDb, _ := db.Clone()
 	insertGenderDb.Table("genders")
-	insertGenderDb.Insert(map[string]interface{}{
-		"gender": "Male",
-	}, true)
-	insertGenderDb.Save()
-
-	insertGenderDb, _ = db.Clone()
-	insertGenderDb.Table("genders")
-	insertGenderDb.Insert(map[string]interface{}{
-		"gender": "Female",
-	}, true)
+	insertGenderDb.InsertMulti([]string{
+		"gender",
+	}, genders, true)
 	insertGenderDb.Save()
 
 	if t, err := db.DoesTableExist("countries"); err == nil && !t {
@@ -208,32 +159,18 @@ func init() {
 		db.RawNonQuery("TRUNCATE TABLE cities;", params)
 	}
 
+	cities := [][]interface{}{
+		{"Derby"},
+		{"Birmingham"},
+		{"Burton-on-Trent"},
+		{"London"},
+	}
+
 	insertCityDb, _ := db.Clone()
 	insertCityDb.Table("cities")
-	insertCityDb.Insert(map[string]interface{}{
-		"city": "Derby",
-	}, true)
-	insertCityDb.Save()
-
-	insertCityDb, _ = db.Clone()
-	insertCityDb.Table("cities")
-	insertCityDb.Insert(map[string]interface{}{
-		"city": "Birmingham",
-	}, true)
-	insertCityDb.Save()
-
-	insertCityDb, _ = db.Clone()
-	insertCityDb.Table("cities")
-	insertCityDb.Insert(map[string]interface{}{
-		"city": "Burton-on-Trent",
-	}, true)
-	insertCityDb.Save()
-
-	insertCityDb, _ = db.Clone()
-	insertCityDb.Table("cities")
-	insertCityDb.Insert(map[string]interface{}{
-		"city": "London",
-	}, true)
+	insertCityDb.InsertMulti([]string{
+		"city",
+	}, cities, true)
 	insertCityDb.Save()
 
 	if t, err := db.DoesTableExist("user_settings"); err == nil && !t {
@@ -303,31 +240,19 @@ func init() {
 		db.RawNonQuery("TRUNCATE TABLE party_guests;", params)
 	}
 
+	guests := [][]interface{}{
+		{1, 1, false},
+		{2, 1, false},
+		{3, 1, true},
+	}
+
 	insertGuestDb, _ := db.Clone()
 	insertGuestDb.Table("party_guests")
-	insertGuestDb.Insert(map[string]interface{}{
-		"user_id":  1,
-		"party_id": 1,
-		"accepted": false,
-	}, true)
-	insertGuestDb.Save()
-
-	insertGuestDb, _ = db.Clone()
-	insertGuestDb.Table("party_guests")
-	insertGuestDb.Insert(map[string]interface{}{
-		"user_id":  2,
-		"party_id": 1,
-		"accepted": false,
-	}, true)
-	insertGuestDb.Save()
-
-	insertGuestDb, _ = db.Clone()
-	insertGuestDb.Table("party_guests")
-	insertGuestDb.Insert(map[string]interface{}{
-		"user_id":  3,
-		"party_id": 1,
-		"accepted": true,
-	}, true)
+	insertGuestDb.InsertMulti([]string{
+		"user_id",
+		"party_id",
+		"accepted",
+	}, guests, true)
 	insertGuestDb.Save()
 
 }
@@ -681,6 +606,44 @@ func TestInsertAndDelete(t *testing.T) {
 	}
 }
 
+func TestInsertMultiAndDelete(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("cities")
+	db.InsertMulti([]string{
+		"city",
+	}, [][]interface{}{
+		{"Hartlepool"},
+		{"Liverpool"},
+		{"Blackpool"},
+	}, true)
+	res, err := db.Save()
+	if err != nil {
+		t.Fatalf("Failed inserting multiple rows, got %s", err.Error())
+	}
+	rows, _ := res.RowsAffected()
+	if rows != 3 {
+		t.Fatalf("Expected to insert 3 rows, got %d", rows)
+	}
+	insertId, _ := res.LastInsertId()
+
+	delDb, _ := db.Clone()
+	delDb.Table("cities")
+	delDb.Where("id", ">=", insertId, true)
+	delDb.Where("id", "<", insertId+rows, true)
+	delRes, err := delDb.Delete()
+	if err != nil {
+		t.Fatalf("Failed deleting multiple rows, got %s", err.Error())
+	}
+	rows, _ = delRes.RowsAffected()
+	if rows != 3 {
+		t.Fatalf("Expected to delete 3 rows, got %d", rows)
+	}
+
+}
+
 func TestUpdate(t *testing.T) {
 	db, err := Open("test")
 	if err != nil {
@@ -887,3 +850,42 @@ func TestGrouping(t *testing.T) {
 		res.Scan(&number, &user_id)
 	}
 }
+
+/* func runQueries(dbs ...DB) {
+	c := make(chan string)
+
+}
+
+type userVars struct {
+	Id         int32
+	First_name string
+}
+
+func TestConc(t *testing.T) {
+	c := make(chan []userVars)
+	go func() {
+		db, err := Open("test")
+		if err != nil {
+			fmt.Println(err)
+			//t.Fatalf("Failed opening database, got %s", err.Error())
+		}
+		db.Table("users")
+		db.Cols([]string{
+			"id",
+			"first_name",
+		})
+		res, close, _ := db.Fetch()
+		defer close()
+		u := []userVars{}
+		for res.Next() {
+			us := userVars{}
+			res.Scan(&us.Id, &us.First_name)
+			u = append(u, us)
+		}
+		c <- u
+	}()
+
+	r := <-c
+	fmt.Println(r)
+}
+*/

@@ -15,6 +15,7 @@ type DB interface {
 	RawQuery(query string, params []interface{}) (*sql.Rows, context.CancelFunc, error)
 	RawNonQuery(query string, params []interface{}) (sql.Result, error)
 	Insert(values map[string]interface{}, escape bool)
+	InsertMulti(columns []string, rows [][]interface{}, escape bool)
 	Update(values map[string]interface{}, escape bool)
 	Cols(cols []string)
 	Count(col string, alias string) string

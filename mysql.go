@@ -25,18 +25,19 @@ type orderBy struct {
 }
 
 type MySQL struct {
-	databaseName  string
-	usedConfig    Config
-	table         string
-	cols          []string
-	query         Query
-	joins         []join
-	params        []interface{}
-	insertValues  []string
-	insertColumns []string
-	updateValues  []string
-	ordering      []orderBy
-	groupColumns  []string
+	databaseName      string
+	usedConfig        Config
+	table             string
+	cols              []string
+	query             Query
+	joins             []join
+	params            []interface{}
+	insertValues      []string
+	multiInsertValues [][]string
+	insertColumns     []string
+	updateValues      []string
+	ordering          []orderBy
+	groupColumns      []string
 }
 
 func (db *MySQL) DoesTableExist(table string) (bool, error) {
@@ -196,24 +197,48 @@ func (db *MySQL) Insert(values map[string]interface{}, escape bool) {
 	var params []interface{}
 	insertColumns := []string{}
 	insertValues := []string{}
-	if escape {
-		for key, val := range values {
-			insertColumns = append(insertColumns, db.checkReserved(key))
-			if escape {
-				params = append(params, val)
-				insertValues = append(insertValues, "?")
-			} else {
-				switch v := val.(type) {
-				case string:
-					insertValues = append(insertValues, v)
-				}
+	for key, val := range values {
+		insertColumns = append(insertColumns, db.checkReserved(key))
+		if escape {
+			params = append(params, val)
+			insertValues = append(insertValues, "?")
+		} else {
+			switch v := val.(type) {
+			case string:
+				insertValues = append(insertValues, v)
 			}
-
 		}
 	}
 	db.params = params
 	db.insertColumns = insertColumns
 	db.insertValues = insertValues
+}
+
+func (db *MySQL) InsertMulti(columns []string, rows [][]interface{}, escape bool) {
+	var params []interface{}
+	insertColumns := []string{}
+	multiInsertValues := [][]string{}
+	for _, col := range columns {
+		insertColumns = append(insertColumns, db.checkReserved(col))
+	}
+	for _, row := range rows {
+		rowInsertValues := []string{}
+		for _, val := range row {
+			if escape {
+				params = append(params, val)
+				rowInsertValues = append(rowInsertValues, "?")
+			} else {
+				switch v := val.(type) {
+				case string:
+					rowInsertValues = append(rowInsertValues, v)
+				}
+			}
+		}
+		multiInsertValues = append(multiInsertValues, rowInsertValues)
+	}
+	db.insertColumns = insertColumns
+	db.params = params
+	db.multiInsertValues = multiInsertValues
 }
 
 func (db *MySQL) Update(values map[string]interface{}, escape bool) {
@@ -420,7 +445,16 @@ func (db *MySQL) GenerateSelect() string {
 }
 func (db *MySQL) GenerateInsert() string {
 	query := fmt.Sprintf("INSERT INTO %s ", db.table)
-	query += fmt.Sprintf(" (%s) VALUES(%s) ", strings.Join(db.insertColumns, ","), strings.Join(db.insertValues, ","))
+	query += fmt.Sprintf(" (%s) VALUES ", strings.Join(db.insertColumns, ","))
+	if len(db.insertValues) > 0 {
+		query += fmt.Sprintf(" (%s) ", strings.Join(db.insertValues, ","))
+	} else if len(db.multiInsertValues) > 0 {
+		insertRows := []string{}
+		for _, row := range db.multiInsertValues {
+			insertRows = append(insertRows, fmt.Sprintf(" (%s) ", strings.Join(row, ",")))
+		}
+		query += strings.Join(insertRows, ",")
+	}
 	return query
 }
 func (db *MySQL) GenerateUpdate() string {
@@ -446,7 +480,7 @@ func (db *MySQL) GenerateDelete() string {
 
 func (db *MySQL) Save() (sql.Result, error) {
 	var query string
-	if len(db.insertValues) > 0 {
+	if len(db.insertValues) > 0 || len(db.multiInsertValues) > 0 {
 		query = db.GenerateInsert()
 	} else if len(db.updateValues) > 0 {
 		query = db.GenerateUpdate()
