@@ -851,41 +851,56 @@ func TestGrouping(t *testing.T) {
 	}
 }
 
-/* func runQueries(dbs ...DB) {
-	c := make(chan string)
+func TestConcurrentFetch(t *testing.T) {
+	db1, _ := Open("test")
+	db1.Table("users")
+	db1.Cols([]string{
+		"id",
+		"first_name",
+		"surname",
+	})
 
-}
+	db2, _ := db1.Clone()
+	db2.Table("cities")
+	db2.Cols([]string{
+		"id",
+		"city",
+	})
 
-type userVars struct {
-	Id         int32
-	First_name string
-}
+	results := ConcurrentFetch(db1, db2)
 
-func TestConc(t *testing.T) {
-	c := make(chan []userVars)
-	go func() {
-		db, err := Open("test")
-		if err != nil {
-			fmt.Println(err)
-			//t.Fatalf("Failed opening database, got %s", err.Error())
+	if len(results) != 2 {
+		t.Fatalf("Expected 2 sets of results, got %d", len(results))
+	}
+	for i, res := range results {
+		defer res.CloseFunc()
+		if i == 0 {
+			numRows := 0
+			for res.Results.Next() {
+				numRows++
+				var (
+					id         int32
+					first_name string
+					surname    string
+				)
+				res.Results.Scan(&id, &first_name, &surname)
+			}
+			if numRows == 0 {
+				t.Fatal("No results returned in first concurrent query")
+			}
+		} else {
+			numRows := 0
+			for res.Results.Next() {
+				numRows++
+				var (
+					id   int32
+					city string
+				)
+				res.Results.Scan(&id, &city)
+			}
+			if numRows == 0 {
+				t.Fatal("No results returned in second concurrent query")
+			}
 		}
-		db.Table("users")
-		db.Cols([]string{
-			"id",
-			"first_name",
-		})
-		res, close, _ := db.Fetch()
-		defer close()
-		u := []userVars{}
-		for res.Next() {
-			us := userVars{}
-			res.Scan(&us.Id, &us.First_name)
-			u = append(u, us)
-		}
-		c <- u
-	}()
-
-	r := <-c
-	fmt.Println(r)
+	}
 }
-*/
