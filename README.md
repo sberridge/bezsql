@@ -260,7 +260,7 @@ userDb.Insert(map[string]interface{}{
 res, err := userDb.Save()
 
 if err != nil {
-    //error handline
+    //error handling
 }
 
 numOfRows, err := res.AffectedRows()
