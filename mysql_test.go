@@ -924,3 +924,49 @@ func TestConcurrentFetch(t *testing.T) {
 		}
 	}
 }
+
+func runConcurrent() {
+
+	queries := []DB{}
+	for i := 0; i < 20; i++ {
+		db, _ := Open("test")
+		db.Table("users")
+		db.Cols([]string{
+			"id",
+			"first_name",
+			"surname",
+		})
+		queries = append(queries, db)
+	}
+
+	res := ConcurrentFetch(queries...)
+	for _, r := range res {
+		defer r.CloseFunc()
+	}
+}
+
+func runNonConcurrent() {
+	for i := 0; i < 20; i++ {
+		db, _ := Open("test")
+		db.Table("users")
+		db.Cols([]string{
+			"id",
+			"first_name",
+			"surname",
+		})
+		_, c, _ := db.Fetch()
+		defer c()
+	}
+}
+
+func BenchmarkConc(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		runConcurrent()
+	}
+}
+
+func BenchmarkNonConc(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		runNonConcurrent()
+	}
+}

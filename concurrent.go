@@ -16,7 +16,8 @@ type concurrentFetchChannelResponse struct {
 	CloseFunc context.CancelFunc
 }
 
-func ConcurrentFetch(queries ...DB) (results []ConcurrentFetchResult) {
+func ConcurrentFetch(queries ...DB) (results map[int]ConcurrentFetchResult) {
+	results = make(map[int]ConcurrentFetchResult)
 	c := make(chan concurrentFetchChannelResponse)
 
 	doFetch := func(index int) {
@@ -39,13 +40,7 @@ func ConcurrentFetch(queries ...DB) (results []ConcurrentFetchResult) {
 			CloseFunc: fr.CloseFunc,
 			Results:   fr.Results,
 		}
-		if len(results) == 0 || len(results) < fr.Index {
-			results = append(results, conRes)
-		} else {
-			results = append(results[:fr.Index+1], results[fr.Index:]...)
-			results[fr.Index] = conRes
-		}
-
+		results[fr.Index] = conRes
 	}
 	return
 }

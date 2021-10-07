@@ -216,6 +216,7 @@ cityDb.Cols([]string{
     "city",
 })
 
+//returns map of int to result where int is the index of the original query
 results := bezsql.ConcurrentFetch(userDb, cityDb)
 
 userResults := results[0]
