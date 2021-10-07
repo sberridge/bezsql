@@ -875,9 +875,8 @@ func TestConcurrentFetch(t *testing.T) {
 	})
 
 	results := ConcurrentFetch(db1, db2, db3)
-
 	if len(results) != 3 {
-		t.Fatalf("Expected 2 sets of results, got %d", len(results))
+		t.Fatalf("Expected 3 sets of results, got %d", len(results))
 	}
 	for i, res := range results {
 		defer res.CloseFunc()
@@ -928,7 +927,7 @@ func TestConcurrentFetch(t *testing.T) {
 func runConcurrent() {
 
 	queries := []DB{}
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 3; i++ {
 		db, _ := Open("test")
 		db.Table("users")
 		db.Cols([]string{

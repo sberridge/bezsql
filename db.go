@@ -9,6 +9,7 @@ type DB interface {
 	Connect(databaseName string, config Config) (bool, error)
 	DoesTableExist(table string) (bool, error)
 	DoesColumnExist(table string, field string) (bool, error)
+	RunParallel()
 	GetConfig() Config
 	NewQuery() (DB, error)
 	Clone() (DB, error)

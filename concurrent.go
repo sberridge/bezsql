@@ -3,6 +3,8 @@ package bezsql
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"time"
 )
 
 type ConcurrentFetchResult struct {
@@ -16,31 +18,85 @@ type concurrentFetchChannelResponse struct {
 	CloseFunc context.CancelFunc
 }
 
+func runReplicas(dbs []DB) concurrentFetchChannelResponse {
+	c := make(chan concurrentFetchChannelResponse)
+	doFetch := func(index int) {
+		db := dbs[index]
+		res, close, err := db.Fetch()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		//defer close()
+		qr := concurrentFetchChannelResponse{
+			Index:     index,
+			Results:   res,
+			CloseFunc: close,
+		}
+		c <- qr
+
+		//attempting to close outstanding contexts after 60 seconds
+		//is this the best way to handle?
+		<-time.After(60 * time.Second)
+		close()
+	}
+	for i := range dbs {
+		go doFetch(i)
+	}
+
+	return <-c
+}
+
 func ConcurrentFetch(queries ...DB) (results map[int]ConcurrentFetchResult) {
 	results = make(map[int]ConcurrentFetchResult)
 	c := make(chan concurrentFetchChannelResponse)
 
 	doFetch := func(index int) {
-		res, closeF, _ := queries[index].Fetch()
+
+		q := queries[index]
+
+		replicas := []DB{}
+
+		for i := 0; i < 3; i++ {
+			qc, _ := q.Clone()
+			qc.RunParallel()
+			replicas = append(replicas, qc)
+		}
+
+		rr := runReplicas(replicas)
+
+		c <- concurrentFetchChannelResponse{
+			Index:     index,
+			Results:   rr.Results,
+			CloseFunc: rr.CloseFunc,
+		}
+
+		/* res, closeF, _ := queries[index].Fetch()
 		cr := concurrentFetchChannelResponse{
 			Index:     index,
 			Results:   res,
 			CloseFunc: closeF,
 		}
-		c <- cr
+		c <- cr */
 	}
 
 	for i := range queries {
 		go doFetch(i)
 	}
-
+	timeout := time.After(100 * time.Millisecond)
 	for i := 0; i < len(queries); i++ {
-		fr := <-c
-		conRes := ConcurrentFetchResult{
-			CloseFunc: fr.CloseFunc,
-			Results:   fr.Results,
+		select {
+		case fr := <-c:
+			conRes := ConcurrentFetchResult{
+				CloseFunc: fr.CloseFunc,
+				Results:   fr.Results,
+			}
+			results[fr.Index] = conRes
+		case <-timeout:
+			return
+
 		}
-		results[fr.Index] = conRes
+
 	}
 	return
 }

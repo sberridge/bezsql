@@ -38,6 +38,7 @@ type MySQL struct {
 	updateValues      []string
 	ordering          []orderBy
 	groupColumns      []string
+	parallel          bool
 }
 
 func (db *MySQL) DoesTableExist(table string) (bool, error) {
@@ -65,6 +66,10 @@ func (db *MySQL) DoesTableExist(table string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func (db *MySQL) RunParallel() {
+	db.parallel = true
 }
 
 func (db *MySQL) DoesColumnExist(table string, field string) (bool, error) {
@@ -192,21 +197,30 @@ func (db *MySQL) Clone() (DB, error) {
 	newDB.ordering = db.ordering
 	newDB.params = db.params
 	newDB.query = db.query
+	newDB.parallel = db.parallel
 
 	return &newDB, err
 
+}
+
+func (db *MySQL) openConnection() (*sql.DB, error) {
+	mySQLConfig := mysql.NewConfig()
+	mySQLConfig.User = db.usedConfig.Username
+	mySQLConfig.Passwd = db.usedConfig.Password
+	mySQLConfig.DBName = db.usedConfig.Database
+	mySQLConfig.Addr = fmt.Sprintf("%s:%d", db.usedConfig.Host, db.usedConfig.Port)
+	odb, err := sql.Open("mysql", mySQLConfig.FormatDSN())
+	odb.SetMaxIdleConns(0)
+	odb.SetMaxOpenConns(5000)
+	return odb, err
 }
 
 func (db *MySQL) Connect(databaseName string, config Config) (bool, error) {
 	db.databaseName = databaseName
 	db.usedConfig = config
 	if _, exists := connections[databaseName]; !exists {
-		mySQLConfig := mysql.NewConfig()
-		mySQLConfig.User = config.Username
-		mySQLConfig.Passwd = config.Password
-		mySQLConfig.DBName = config.Database
-		mySQLConfig.Addr = fmt.Sprintf("%s:%d", config.Host, config.Port)
-		dbCon, err := sql.Open("mysql", mySQLConfig.FormatDSN())
+
+		dbCon, err := db.openConnection()
 		if err != nil {
 			return false, err
 		}
@@ -519,8 +533,19 @@ func (db *MySQL) Delete() (sql.Result, error) {
 }
 
 func (db *MySQL) executeQuery(query string) (*sql.Rows, context.CancelFunc, error) {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
 	con := connections[db.databaseName]
+
+	if db.parallel {
+		newCon, err := db.openConnection()
+		if err != nil {
+			fmt.Println(err)
+			defer cancelFunc()
+			return nil, nil, err
+		}
+		con = newCon
+		defer con.Close()
+	}
 	results, err := con.QueryContext(ctx, query, db.params...)
 
 	if err != nil {
@@ -532,9 +557,20 @@ func (db *MySQL) executeQuery(query string) (*sql.Rows, context.CancelFunc, erro
 }
 
 func (db *MySQL) executeNonQuery(query string) (sql.Result, error) {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelFunc()
 	con := connections[db.databaseName]
+
+	if db.parallel {
+		newCon, err := db.openConnection()
+		if err != nil {
+			fmt.Println(err)
+			return nil, err
+		}
+		con = newCon
+		defer con.Close()
+	}
+
 	results, err := con.ExecContext(ctx, query, db.params...)
 
 	if err != nil {
