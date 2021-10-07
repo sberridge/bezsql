@@ -10,6 +10,7 @@ type DB interface {
 	DoesTableExist(table string) (bool, error)
 	DoesColumnExist(table string, field string) (bool, error)
 	GetConfig() Config
+	NewQuery() (DB, error)
 	Clone() (DB, error)
 	Table(table string)
 	RawQuery(query string, params []interface{}) (*sql.Rows, context.CancelFunc, error)

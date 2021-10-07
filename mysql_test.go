@@ -59,7 +59,7 @@ func init() {
 		{1, "Juliet", "Jones", "jules@jones.com", 2, "1985-06-01 00:00:00", "079874636334544", 1, 1, "ST54 POC", "1 Everet Avenue", 1},
 	}
 
-	insertUserDb, _ := db.Clone()
+	insertUserDb, _ := db.NewQuery()
 	insertUserDb.Table("users")
 	insertUserDb.InsertMulti([]string{
 		"title_id",
@@ -91,7 +91,7 @@ func init() {
 		db.RawNonQuery("TRUNCATE TABLE titles;", params)
 	}
 
-	insertTitleDb, _ := db.Clone()
+	insertTitleDb, _ := db.NewQuery()
 	insertTitleDb.Table("titles")
 	insertTitleDb.Insert(map[string]interface{}{
 		"title": "Mr",
@@ -117,7 +117,7 @@ func init() {
 		{"Female"},
 	}
 
-	insertGenderDb, _ := db.Clone()
+	insertGenderDb, _ := db.NewQuery()
 	insertGenderDb.Table("genders")
 	insertGenderDb.InsertMulti([]string{
 		"gender",
@@ -138,7 +138,7 @@ func init() {
 		db.RawNonQuery("TRUNCATE TABLE countries;", params)
 	}
 
-	insertCountryDb, _ := db.Clone()
+	insertCountryDb, _ := db.NewQuery()
 	insertCountryDb.Table("countries")
 	insertCountryDb.Insert(map[string]interface{}{
 		"country": "United Kingdom",
@@ -166,7 +166,7 @@ func init() {
 		{"London"},
 	}
 
-	insertCityDb, _ := db.Clone()
+	insertCityDb, _ := db.NewQuery()
 	insertCityDb.Table("cities")
 	insertCityDb.InsertMulti([]string{
 		"city",
@@ -187,14 +187,14 @@ func init() {
 		db.RawNonQuery("TRUNCATE TABLE user_settings;", params)
 	}
 
-	insertUserSettingsDb, _ := db.Clone()
+	insertUserSettingsDb, _ := db.NewQuery()
 	insertUserSettingsDb.Table("user_settings")
 	insertUserSettingsDb.Insert(map[string]interface{}{
 		"user_id": 1,
 	}, true)
 	insertUserSettingsDb.Save()
 
-	insertUserSettingsDb, _ = db.Clone()
+	insertUserSettingsDb, _ = db.NewQuery()
 	insertUserSettingsDb.Table("user_settings")
 	insertUserSettingsDb.Insert(map[string]interface{}{
 		"user_id": 2,
@@ -216,7 +216,7 @@ func init() {
 		db.RawNonQuery("TRUNCATE TABLE parties;", params)
 	}
 
-	insertPartyDb, _ := db.Clone()
+	insertPartyDb, _ := db.NewQuery()
 	insertPartyDb.Table("parties")
 	insertPartyDb.Insert(map[string]interface{}{
 		"date":    "2021-10-01 18:00:00",
@@ -246,7 +246,7 @@ func init() {
 		{3, 1, true},
 	}
 
-	insertGuestDb, _ := db.Clone()
+	insertGuestDb, _ := db.NewQuery()
 	insertGuestDb.Table("party_guests")
 	insertGuestDb.InsertMulti([]string{
 		"user_id",
@@ -515,7 +515,7 @@ func TestSelectWhereInSub(t *testing.T) {
 		"gender_id",
 	})
 
-	subDb, _ := db.Clone()
+	subDb, _ := db.NewQuery()
 	subDb.Table("genders")
 	subDb.Cols([]string{
 		"id",
@@ -553,7 +553,7 @@ func TestSelectWhereNotInSub(t *testing.T) {
 		"gender_id",
 	})
 
-	subDb, _ := db.Clone()
+	subDb, _ := db.NewQuery()
 	subDb.Table("genders")
 	subDb.Cols([]string{
 		"id",
@@ -596,7 +596,7 @@ func TestInsertAndDelete(t *testing.T) {
 		t.Fatalf("Record not inserted")
 	} else {
 		id, _ := res.LastInsertId()
-		deleteDb, _ := db.Clone()
+		deleteDb, _ := db.NewQuery()
 		deleteDb.Table("cities")
 		deleteDb.Where("id", "=", id, true)
 		res, _ := deleteDb.Delete()
@@ -629,7 +629,7 @@ func TestInsertMultiAndDelete(t *testing.T) {
 	}
 	insertId, _ := res.LastInsertId()
 
-	delDb, _ := db.Clone()
+	delDb, _ := db.NewQuery()
 	delDb.Table("cities")
 	delDb.Where("id", ">=", insertId, true)
 	delDb.Where("id", "<", insertId+rows, true)
@@ -777,7 +777,7 @@ func TestSubJoin(t *testing.T) {
 		"users.first_name",
 		"g.accepted",
 	})
-	subDb, _ := db.Clone()
+	subDb, _ := db.NewQuery()
 	subDb.Table("party_guests")
 	subDb.Cols([]string{
 		"user_id",
@@ -860,14 +860,14 @@ func TestConcurrentFetch(t *testing.T) {
 		"surname",
 	})
 
-	db2, _ := db1.Clone()
+	db2, _ := db1.NewQuery()
 	db2.Table("cities")
 	db2.Cols([]string{
 		"id",
 		"city",
 	})
 
-	db3, _ := db1.Clone()
+	db3, _ := db1.NewQuery()
 	db3.Table("genders")
 	db3.Cols([]string{
 		"id",

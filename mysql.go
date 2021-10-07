@@ -41,7 +41,7 @@ type MySQL struct {
 }
 
 func (db *MySQL) DoesTableExist(table string) (bool, error) {
-	newDb, err := db.Clone()
+	newDb, err := db.NewQuery()
 	if err != nil {
 		return false, err
 	}
@@ -68,7 +68,7 @@ func (db *MySQL) DoesTableExist(table string) (bool, error) {
 }
 
 func (db *MySQL) DoesColumnExist(table string, field string) (bool, error) {
-	newDb, err := db.Clone()
+	newDb, err := db.NewQuery()
 	if err != nil {
 		return false, err
 	}
@@ -165,13 +165,36 @@ func (db *MySQL) Count(col string, alias string) string {
 	return fmt.Sprintf("COUNT(%s) %s", db.checkReserved(col), db.checkReserved(alias))
 }
 
-func (db *MySQL) Clone() (DB, error) {
+func (db *MySQL) NewQuery() (DB, error) {
 	newDB := MySQL{}
 	_, err := newDB.Connect(db.databaseName, db.usedConfig)
 	if err != nil {
 		return nil, err
 	}
 	return &newDB, nil
+}
+
+func (db *MySQL) Clone() (DB, error) {
+	newDB := MySQL{}
+	_, err := newDB.Connect(db.databaseName, db.usedConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	newDB.table = db.table
+	newDB.cols = db.cols
+	newDB.groupColumns = db.groupColumns
+	newDB.insertColumns = db.insertColumns
+	newDB.insertValues = db.insertValues
+	newDB.updateValues = db.updateValues
+	newDB.joins = db.joins
+	newDB.multiInsertValues = db.multiInsertValues
+	newDB.ordering = db.ordering
+	newDB.params = db.params
+	newDB.query = db.query
+
+	return &newDB, err
+
 }
 
 func (db *MySQL) Connect(databaseName string, config Config) (bool, error) {

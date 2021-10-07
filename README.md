@@ -95,8 +95,8 @@ db.WhereInList("field3", []interface{}{
     "val2",
 }, true) // WHERE field3 IN (?,?)
 
-// clone to quickly create new query on the same database
-subWhereInDb := db.Clone()
+// create new query on the same database
+subWhereInDb := db.NewQuery()
 subWhereInDb.Table("user_posts")
 subWhereInDb.Cols([]string{
     subWhereInDb.Count("id", "number"),
@@ -208,8 +208,8 @@ userDb.Cols([]string{
 })
 userDb.Where("date_created", ">", "2021-10-01", true)
 
-//clone to create new query on the same database
-cityDb, _ := userDb.Clone()
+//create new query on the same database
+cityDb, _ := userDb.NewQuery()
 cityDb.Table("cities")
 cityDb.Cols([]string{
     "id",
