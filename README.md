@@ -26,7 +26,7 @@ bezsql.SetConnections(map[string]bezsql.Config{
 
 ### Open Database Connection
 
-To being a query you can use the Open function to return a Database struct which can be used to build and run a query.
+To begin a query you can use the Open function to return a Database struct which can be used to build and run a query.
 
 ```go
 db, err := bezsql.Open("test")
@@ -167,7 +167,7 @@ db.LeftJoinTableQuery("posts", func(q *bezsql.Query) {
 })
 
 
-subDb, _ = bezsql.Open("test")
+subDb, _ := bezsql.Open("test")
 subDb.Table("posts")
 subDb.Cols([]string{
     subDb.Count("*", "number_of_posts"),
@@ -200,7 +200,7 @@ db.LeftJoinSubQuery(subDb, "post_count", func(q *bezsql.Query) {
 A WIP function is available to allow query results to be fetched concurrently.
 
 ```go
-userDb, _ = bezsql.Open("test")
+userDb, _ := bezsql.Open("test")
 userDb.Table("users")
 userDb.Cols([]string{
     "id",
@@ -244,6 +244,51 @@ for cityResults.Results.Next() {
 ```
 
 ### Inserting Records
+
+Inserting records is done using the following methods:
+
+* Insert
+* InsertMulti
+
+```go
+userDb, _ := bezsql.Open("test")
+userDb.Table("users")
+//map of fields and values, whether or not to paramatise the values
+userDb.Insert(map[string]interface{}{
+    "username": "My User",
+}, true)
+res, err := userDb.Save()
+
+if err != nil {
+    //error handline
+}
+
+numOfRows, err := res.AffectedRows()
+
+lastInsertId, err := res.LastInsertId()
+
+
+
+//multi insert
+
+multiInsertDb, err := userDb.NewQuery()
+
+multiInsertDb.InsertMulti([]string{
+    "username",
+}, [][]interface{}{
+    {"New User"},
+    {"Second New User"},
+})
+
+res, err = multiInsertDb.Save()
+
+numOfRows, err = res.AffectedRows()
+
+firstInsertedId, err = res.LastInsertId()
+
+//inserted ids = firstInsertedId -> (firstInsertedId + numOfRows) - 1
+
+```
 
 
 ### Updating Records
