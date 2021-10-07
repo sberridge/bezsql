@@ -39,7 +39,7 @@ func ConcurrentFetch(queries ...DB) (results []ConcurrentFetchResult) {
 			CloseFunc: fr.CloseFunc,
 			Results:   fr.Results,
 		}
-		if len(results) < fr.Index {
+		if len(results) == 0 || len(results) < fr.Index {
 			results = append(results, conRes)
 		} else {
 			results = append(results[:fr.Index+1], results[fr.Index:]...)

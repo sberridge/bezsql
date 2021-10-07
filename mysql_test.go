@@ -867,9 +867,16 @@ func TestConcurrentFetch(t *testing.T) {
 		"city",
 	})
 
-	results := ConcurrentFetch(db1, db2)
+	db3, _ := db1.Clone()
+	db3.Table("genders")
+	db3.Cols([]string{
+		"id",
+		"gender",
+	})
 
-	if len(results) != 2 {
+	results := ConcurrentFetch(db1, db2, db3)
+
+	if len(results) != 3 {
 		t.Fatalf("Expected 2 sets of results, got %d", len(results))
 	}
 	for i, res := range results {
@@ -888,7 +895,7 @@ func TestConcurrentFetch(t *testing.T) {
 			if numRows == 0 {
 				t.Fatal("No results returned in first concurrent query")
 			}
-		} else {
+		} else if i == 1 {
 			numRows := 0
 			for res.Results.Next() {
 				numRows++
@@ -900,6 +907,19 @@ func TestConcurrentFetch(t *testing.T) {
 			}
 			if numRows == 0 {
 				t.Fatal("No results returned in second concurrent query")
+			}
+		} else if i == 2 {
+			numRows := 0
+			for res.Results.Next() {
+				numRows++
+				var (
+					id     int32
+					gender string
+				)
+				res.Results.Scan(&id, &gender)
+			}
+			if numRows == 0 {
+				t.Fatal("No results returned in third concurrent query")
 			}
 		}
 	}
