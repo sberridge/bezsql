@@ -34,12 +34,11 @@ func runReplicas(dbs []DB) concurrentFetchChannelResponse {
 			return
 		}
 
-		qr := concurrentFetchChannelResponse{
+		c <- concurrentFetchChannelResponse{
 			Index:     index,
 			Results:   res,
 			CloseFunc: close,
 		}
-		c <- qr
 		done = true
 	}
 	for i := range dbs {
