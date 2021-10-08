@@ -927,7 +927,7 @@ func TestConcurrentFetch(t *testing.T) {
 func runConcurrent() {
 
 	queries := []DB{}
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 20; i++ {
 		db, _ := Open("test")
 		db.Table("users")
 		db.Cols([]string{
