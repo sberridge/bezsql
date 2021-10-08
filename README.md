@@ -131,6 +131,16 @@ db.CloseBracket()
 //WHERE (field = ? OR field2 = ?) AND (field3 = ? OR field4 = ?)
 ```
 
+### Ordering Results
+
+Ordering is done using the OrderBy method.
+
+```go
+db.OrderBy("date_created","ASC")
+db.OrderBy("first_name", "ASC")
+//ORDER BY date_created ASC, first_name ASC
+```
+
 ### Table Joins
 
 Joining tables is done using the following methods:

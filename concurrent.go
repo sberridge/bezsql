@@ -20,6 +20,7 @@ type concurrentFetchChannelResponse struct {
 
 func runReplicas(dbs []DB) concurrentFetchChannelResponse {
 	c := make(chan concurrentFetchChannelResponse)
+	done := false
 	doFetch := func(index int) {
 		db := dbs[index]
 		res, close, err := db.Fetch()
@@ -27,18 +28,19 @@ func runReplicas(dbs []DB) concurrentFetchChannelResponse {
 			fmt.Println(err)
 			return
 		}
-		//defer close()
+
+		if done {
+			close()
+			return
+		}
+
 		qr := concurrentFetchChannelResponse{
 			Index:     index,
 			Results:   res,
 			CloseFunc: close,
 		}
 		c <- qr
-
-		//attempting to close outstanding contexts after 60 seconds
-		//is this the best way to handle?
-		<-time.After(60 * time.Second)
-		close()
+		done = true
 	}
 	for i := range dbs {
 		go doFetch(i)
@@ -70,14 +72,6 @@ func ConcurrentFetch(queries ...DB) (results map[int]ConcurrentFetchResult) {
 			Results:   rr.Results,
 			CloseFunc: rr.CloseFunc,
 		}
-
-		/* res, closeF, _ := queries[index].Fetch()
-		cr := concurrentFetchChannelResponse{
-			Index:     index,
-			Results:   res,
-			CloseFunc: closeF,
-		}
-		c <- cr */
 	}
 
 	for i := range queries {
