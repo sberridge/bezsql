@@ -36,6 +36,8 @@ type MySQL struct {
 	multiInsertValues [][]string
 	insertColumns     []string
 	updateValues      []string
+	limitBy           int
+	offsetBy          int
 	ordering          []orderBy
 	groupColumns      []string
 	parallel          bool
@@ -424,6 +426,14 @@ func (db *MySQL) CloseBracket() {
 	db.query.CloseBracket()
 }
 
+func (db *MySQL) LimitBy(number int) {
+	db.limitBy = number
+}
+
+func (db *MySQL) OffsetBy(number int) {
+	db.offsetBy = number
+}
+
 func (db *MySQL) OrderBy(field string, direction string) {
 	direction = strings.ToUpper(direction)
 	if direction == "ASC" || direction == "DESC" {
@@ -463,6 +473,11 @@ func (db *MySQL) GenerateSelect() string {
 		query += " WHERE " + whereString
 	}
 
+	if len(db.groupColumns) > 0 {
+		query += fmt.Sprintf(" GROUP BY %s", strings.Join(db.groupColumns, ","))
+
+	}
+
 	if len(db.ordering) > 0 {
 		query += " ORDER BY "
 		orderStrings := []string{}
@@ -472,11 +487,13 @@ func (db *MySQL) GenerateSelect() string {
 		query += strings.Join(orderStrings, ", ")
 	}
 
-	if len(db.groupColumns) > 0 {
-		query += fmt.Sprintf(" GROUP BY %s", strings.Join(db.groupColumns, ","))
-
+	if db.limitBy > 0 {
+		query += fmt.Sprintf(" LIMIT %d ", db.limitBy)
+		if db.offsetBy > 0 {
+			query += fmt.Sprintf(" OFFSET %d ", db.offsetBy)
+		}
 	}
-
+	fmt.Println(query)
 	db.params = params
 	return query
 }

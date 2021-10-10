@@ -44,6 +44,8 @@ type DB interface {
 	And()
 	OpenBracket()
 	CloseBracket()
+	LimitBy(number int)
+	OffsetBy(number int)
 	OrderBy(field string, direction string)
 	GroupBy(field ...string)
 	Save() (sql.Result, error)

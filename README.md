@@ -245,6 +245,16 @@ db.CloseBracket()
 //WHERE (field = ? OR field2 = ?) AND (field3 = ? OR field4 = ?)
 ```
 
+### Grouping Results
+
+Grouping is done with the GroupBy method.
+
+```go
+// variadic function accepting any number of group fields
+db.GroupBy("field1", "field2")
+//GROUP BY field1, field2
+```
+
 ### Ordering Results
 
 Ordering is done using the OrderBy method.
@@ -253,6 +263,26 @@ Ordering is done using the OrderBy method.
 db.OrderBy("date_created","ASC")
 db.OrderBy("first_name", "ASC")
 //ORDER BY date_created ASC, first_name ASC
+```
+
+### Limiting Results
+
+Limiting is done with the LimitBy method.
+
+```go
+db.LimitBy(10)
+
+// LIMIT 10
+```
+
+### Offsetting Results
+
+Offsetting is done with the OffsetBy method.
+
+```go
+db.OffsetBy(1)
+
+// OFFSET 1
 ```
 
 ### Table Joins

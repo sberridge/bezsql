@@ -851,6 +851,59 @@ func TestGrouping(t *testing.T) {
 	}
 }
 
+func TestLimitOffset(t *testing.T) {
+	db, err := Open("test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	db.Table("users")
+	db.Cols([]string{
+		"id",
+	})
+	db.OrderBy("id", "ASC")
+	db.LimitBy(1)
+	res, closeFunc, _ := db.Fetch()
+	defer closeFunc()
+	numRows := 0
+	for res.Next() {
+		numRows++
+		var (
+			id int
+		)
+		res.Scan(&id)
+		if id != 1 {
+			t.Fatalf("Expected ID 1, got %d", id)
+		}
+	}
+	if numRows != 1 {
+		t.Fatalf("Expected 1 row, got %d", numRows)
+	}
+
+	db.LimitBy(2)
+	db.OffsetBy(1)
+
+	res, closeFunc, _ = db.Fetch()
+	defer closeFunc()
+	numRows = 0
+	ids := []string{}
+	for res.Next() {
+		numRows++
+		var (
+			id int
+		)
+		res.Scan(&id)
+		ids = append(ids, fmt.Sprintf("%d", id))
+	}
+	if numRows != 2 {
+		t.Fatalf("Expected 2 rows, got %d", numRows)
+	}
+	idStr := strings.Join(ids, ",")
+	if idStr != "2,3" {
+		t.Fatalf("Expected IDs 2 and 3, got %s", idStr)
+	}
+
+}
+
 func TestConcurrentFetch(t *testing.T) {
 	db, _ := Open("test")
 	db.Table("users")
