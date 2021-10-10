@@ -851,6 +851,14 @@ func TestGrouping(t *testing.T) {
 	}
 }
 
+func joinErrors(errors []error) string {
+	errorStrings := []string{}
+	for _, err := range errors {
+		errorStrings = append(errorStrings, err.Error())
+	}
+	return strings.Join(errorStrings, ", ")
+}
+
 func TestConcurrentFetch(t *testing.T) {
 	db1, _ := Open("test")
 	db1.Table("users")
@@ -879,43 +887,81 @@ func TestConcurrentFetch(t *testing.T) {
 		t.Fatalf("Expected 3 sets of results, got %d", len(results))
 	}
 	for i, res := range results {
-		defer res.CloseFunc()
 		if i == 0 {
 			numRows := 0
-			for res.Results.Next() {
-				numRows++
-				var (
-					id         int32
-					first_name string
-					surname    string
-				)
-				res.Results.Scan(&id, &first_name, &surname)
+			if len(res.Errors) > 0 {
+				t.Fatalf("First query errored %s", joinErrors(res.Errors))
+			}
+			complete := false
+			for {
+				select {
+				case row := <-res.RowChannel:
+					numRows++
+					var (
+						id         int32
+						first_name string
+						surname    string
+					)
+					row.Scan(&id, &first_name, &surname)
+					res.NextChannel <- true
+				case <-res.CompleteChannel:
+					complete = true
+				}
+				if complete {
+					break
+				}
 			}
 			if numRows == 0 {
 				t.Fatal("No results returned in first concurrent query")
 			}
 		} else if i == 1 {
 			numRows := 0
-			for res.Results.Next() {
-				numRows++
-				var (
-					id   int32
-					city string
-				)
-				res.Results.Scan(&id, &city)
+			if len(res.Errors) > 0 {
+				t.Fatalf("First query errored %s", joinErrors(res.Errors))
+			}
+			complete := false
+			for {
+				select {
+				case row := <-res.RowChannel:
+					numRows++
+					var (
+						id   int32
+						city string
+					)
+					row.Scan(&id, &city)
+					res.NextChannel <- true
+				case <-res.CompleteChannel:
+					complete = true
+				}
+				if complete {
+					break
+				}
 			}
 			if numRows == 0 {
 				t.Fatal("No results returned in second concurrent query")
 			}
 		} else if i == 2 {
 			numRows := 0
-			for res.Results.Next() {
-				numRows++
-				var (
-					id     int32
-					gender string
-				)
-				res.Results.Scan(&id, &gender)
+			if len(res.Errors) > 0 {
+				t.Fatalf("First query errored %s", joinErrors(res.Errors))
+			}
+			complete := false
+			for {
+				select {
+				case row := <-res.RowChannel:
+					numRows++
+					var (
+						id     int32
+						gender string
+					)
+					row.Scan(&id, &gender)
+					res.NextChannel <- true
+				case <-res.CompleteChannel:
+					complete = true
+				}
+				if complete {
+					break
+				}
 			}
 			if numRows == 0 {
 				t.Fatal("No results returned in third concurrent query")
@@ -927,7 +973,7 @@ func TestConcurrentFetch(t *testing.T) {
 func runConcurrent() {
 
 	queries := []DB{}
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 1; i++ {
 		db, _ := Open("test")
 		db.Table("users")
 		db.Cols([]string{
@@ -940,7 +986,12 @@ func runConcurrent() {
 
 	res := ConcurrentFetch(queries...)
 	for _, r := range res {
-		defer r.CloseFunc()
+		if len(r.Errors) == 0 {
+			fmt.Println("test!!")
+			r.CancelChannel <- true
+		} else {
+			fmt.Println("oh no")
+		}
 	}
 }
 

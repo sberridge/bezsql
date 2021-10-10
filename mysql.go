@@ -525,11 +525,61 @@ func (db *MySQL) Save() (sql.Result, error) {
 	return db.executeNonQuery(query)
 }
 func (db *MySQL) Fetch() (*sql.Rows, context.CancelFunc, error) {
+
 	return db.executeQuery(db.GenerateSelect())
+}
+
+func (db *MySQL) FetchConc() (successChannel chan bool, rowChannel chan *sql.Rows, nextChannel chan bool, completeChannel chan bool, cancelChannel chan bool, errorChannel chan error) {
+	successChannel = make(chan bool)
+	rowChannel = make(chan *sql.Rows)
+	nextChannel = make(chan bool)
+	completeChannel = make(chan bool)
+	cancelChannel = make(chan bool)
+	errorChannel = make(chan error)
+	go db.concExecuteQuery(db.GenerateSelect(), successChannel, rowChannel, nextChannel, completeChannel, cancelChannel, errorChannel)
+	return successChannel, rowChannel, nextChannel, completeChannel, cancelChannel, errorChannel
 }
 
 func (db *MySQL) Delete() (sql.Result, error) {
 	return db.executeNonQuery(db.GenerateDelete())
+}
+
+func (db *MySQL) concExecuteQuery(query string, successChannel chan bool, rowChan chan *sql.Rows, nextChan chan bool, completeChan chan bool, cancelChan chan bool, errorChan chan error) {
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
+	con := connections[db.databaseName]
+
+	if db.parallel {
+		newCon, err := db.openConnection()
+		if err != nil {
+			fmt.Println(err)
+			defer cancelFunc()
+			errorChan <- err
+		}
+		con = newCon
+		defer con.Close()
+	}
+	results, err := con.QueryContext(ctx, query, db.params...)
+	if err != nil {
+		fmt.Println(err)
+		defer cancelFunc()
+		errorChan <- err
+	}
+	successChannel <- true
+	cancelled := false
+	for results.Next() {
+		select {
+		case rowChan <- results:
+			<-nextChan
+		case <-cancelChan:
+			cancelled = true
+		}
+		if cancelled {
+			defer cancelFunc()
+			return
+		}
+	}
+	defer cancelFunc()
+	completeChan <- true
 }
 
 func (db *MySQL) executeQuery(query string) (*sql.Rows, context.CancelFunc, error) {
