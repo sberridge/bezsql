@@ -49,5 +49,5 @@ type DB interface {
 	Save() (sql.Result, error)
 	Delete() (sql.Result, error)
 	Fetch() (*sql.Rows, context.CancelFunc, error)
-	FetchConc() (successChannel chan bool, rowChannel chan *sql.Rows, nextChannel chan bool, completeChannel chan bool, cancelChannel chan bool, errorChannel chan error)
+	FetchConcurrent() (successChannel chan bool, startRowsChannel chan bool, rowChannel chan *sql.Rows, nextChannel chan bool, completeChannel chan bool, cancelChannel chan bool, errorChannel chan error)
 }

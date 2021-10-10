@@ -851,6 +851,39 @@ func TestGrouping(t *testing.T) {
 	}
 }
 
+func TestConcurrentFetch(t *testing.T) {
+	db, _ := Open("test")
+	db.Table("users")
+	db.Cols([]string{
+		"id",
+		"first_name",
+	})
+	successChannel, startRowsChannel, rowChannel, nextChannel, completeChannel, _, errorChannel := db.FetchConcurrent()
+	select {
+	case err := <-errorChannel:
+		t.Fatalf("Concurrent fetch errored with %s", err.Error())
+	case <-successChannel:
+		startRowsChannel <- true
+		numRows := 0
+		complete := false
+		for {
+			select {
+			case <-rowChannel:
+				numRows++
+				nextChannel <- true
+			case <-completeChannel:
+				complete = true
+			}
+			if complete {
+				break
+			}
+		}
+		if numRows == 0 {
+			t.Fatalf("No rows returned")
+		}
+	}
+}
+
 func joinErrors(errors []error) string {
 	errorStrings := []string{}
 	for _, err := range errors {
@@ -859,7 +892,7 @@ func joinErrors(errors []error) string {
 	return strings.Join(errorStrings, ", ")
 }
 
-func TestConcurrentFetch(t *testing.T) {
+func TestConcurrentMultiFetch(t *testing.T) {
 	db1, _ := Open("test")
 	db1.Table("users")
 	db1.Cols([]string{
@@ -882,9 +915,16 @@ func TestConcurrentFetch(t *testing.T) {
 		"gender",
 	})
 
-	results := ConcurrentFetch(db1, db2, db3)
-	if len(results) != 3 {
-		t.Fatalf("Expected 3 sets of results, got %d", len(results))
+	db4, _ := db1.NewQuery()
+	db4.Table("countries")
+	db4.Cols([]string{
+		"id",
+		"country",
+	})
+
+	results := ConcurrentFetch(db1, db2, db3, db4)
+	if len(results) != 4 {
+		t.Fatalf("Expected 4 sets of results, got %d", len(results))
 	}
 	for i, res := range results {
 		if i == 0 {
@@ -893,6 +933,7 @@ func TestConcurrentFetch(t *testing.T) {
 				t.Fatalf("First query errored %s", joinErrors(res.Errors))
 			}
 			complete := false
+			res.StartRowsChannel <- true
 			for {
 				select {
 				case row := <-res.RowChannel:
@@ -917,9 +958,10 @@ func TestConcurrentFetch(t *testing.T) {
 		} else if i == 1 {
 			numRows := 0
 			if len(res.Errors) > 0 {
-				t.Fatalf("First query errored %s", joinErrors(res.Errors))
+				t.Fatalf("Second query errored %s", joinErrors(res.Errors))
 			}
 			complete := false
+			res.StartRowsChannel <- true
 			for {
 				select {
 				case row := <-res.RowChannel:
@@ -943,9 +985,10 @@ func TestConcurrentFetch(t *testing.T) {
 		} else if i == 2 {
 			numRows := 0
 			if len(res.Errors) > 0 {
-				t.Fatalf("First query errored %s", joinErrors(res.Errors))
+				t.Fatalf("Third query errored %s", joinErrors(res.Errors))
 			}
 			complete := false
+			res.StartRowsChannel <- true
 			for {
 				select {
 				case row := <-res.RowChannel:
@@ -966,6 +1009,11 @@ func TestConcurrentFetch(t *testing.T) {
 			if numRows == 0 {
 				t.Fatal("No results returned in third concurrent query")
 			}
+		} else if i == 3 {
+			if len(res.Errors) > 0 {
+				t.Fatalf("Third query errored %s", joinErrors(res.Errors))
+			}
+			res.CancelChannel <- true
 		}
 	}
 }
@@ -987,9 +1035,30 @@ func runConcurrent() {
 	res := ConcurrentFetch(queries...)
 	for _, r := range res {
 		if len(r.Errors) == 0 {
-			fmt.Println("test!!")
-			r.CancelChannel <- true
+			//fmt.Println("test!!")
+			r.StartRowsChannel <- true
+			done := false
+			for {
+				select {
+				case row := <-r.RowChannel:
+					var (
+						id         int
+						first_name string
+						surname    string
+					)
+					row.Scan(&id, &first_name, &surname)
+					fmt.Println(id, first_name, surname)
+					r.NextChannel <- true
+				case <-r.CompleteChannel:
+					done = true
+				}
+				if done {
+					break
+				}
+			}
+			//r.CancelChannel <- true
 		} else {
+			fmt.Println(r.Errors)
 			fmt.Println("oh no")
 		}
 	}

@@ -6,40 +6,44 @@ import (
 )
 
 type ConcurrentFetchResult struct {
-	Errors          []error
-	RowChannel      chan *sql.Rows
-	NextChannel     chan bool
-	CompleteChannel chan bool
-	CancelChannel   chan bool
+	Errors           []error
+	StartRowsChannel chan bool
+	RowChannel       chan *sql.Rows
+	NextChannel      chan bool
+	CompleteChannel  chan bool
+	CancelChannel    chan bool
 }
 
 type concurrentFetchChannelResponse struct {
-	Index           int
-	Errors          []error
-	RowChannel      chan *sql.Rows
-	NextChannel     chan bool
-	CompleteChannel chan bool
-	CancelChannel   chan bool
+	Index            int
+	Errors           []error
+	RowChannel       chan *sql.Rows
+	StartRowsChannel chan bool
+	NextChannel      chan bool
+	CompleteChannel  chan bool
+	CancelChannel    chan bool
 }
 
 type concurrentFetchQueryChannelResponse struct {
-	RowChannel      chan *sql.Rows
-	NextChannel     chan bool
-	CompleteChannel chan bool
-	CancelChannel   chan bool
+	StartRowsChannel chan bool
+	RowChannel       chan *sql.Rows
+	NextChannel      chan bool
+	CompleteChannel  chan bool
+	CancelChannel    chan bool
 }
 
 func executeReplica(db DB, responseChannel chan concurrentFetchQueryChannelResponse, errorChannel chan error) {
-	successChannel, rowChannel, nextChannel, completeChannel, cancelChannel, queryErrorChannel := db.FetchConc()
+	successChannel, startRowsChannel, rowChannel, nextChannel, completeChannel, cancelChannel, queryErrorChannel := db.FetchConcurrent()
 	select {
 	case err := <-queryErrorChannel:
 		errorChannel <- err
 	case <-successChannel:
 		responseChannel <- concurrentFetchQueryChannelResponse{
-			RowChannel:      rowChannel,
-			NextChannel:     nextChannel,
-			CompleteChannel: completeChannel,
-			CancelChannel:   cancelChannel,
+			StartRowsChannel: startRowsChannel,
+			RowChannel:       rowChannel,
+			NextChannel:      nextChannel,
+			CompleteChannel:  completeChannel,
+			CancelChannel:    cancelChannel,
 		}
 
 	}
@@ -75,9 +79,9 @@ func runReplicas(dbs []DB) (*concurrentFetchQueryChannelResponse, []error) {
 func replicateQuery(index int, query DB, resultChan chan concurrentFetchChannelResponse) {
 	replicas := []DB{}
 
-	for i := 0; i < 3; i++ {
+	//isn't liking replication atm
+	for i := 0; i < 1; i++ {
 		qc, _ := query.Clone()
-		qc.RunParallel()
 		replicas = append(replicas, qc)
 	}
 
@@ -90,11 +94,12 @@ func replicateQuery(index int, query DB, resultChan chan concurrentFetchChannelR
 		}
 	} else {
 		resultChan <- concurrentFetchChannelResponse{
-			Index:           index,
-			RowChannel:      rr.RowChannel,
-			NextChannel:     rr.NextChannel,
-			CancelChannel:   rr.CancelChannel,
-			CompleteChannel: rr.CompleteChannel,
+			Index:            index,
+			StartRowsChannel: rr.StartRowsChannel,
+			RowChannel:       rr.RowChannel,
+			NextChannel:      rr.NextChannel,
+			CancelChannel:    rr.CancelChannel,
+			CompleteChannel:  rr.CompleteChannel,
 		}
 	}
 }
@@ -111,11 +116,12 @@ func ConcurrentFetch(queries ...DB) (results map[int]ConcurrentFetchResult) {
 		select {
 		case fr := <-c:
 			conRes := ConcurrentFetchResult{
-				Errors:          fr.Errors,
-				RowChannel:      fr.RowChannel,
-				NextChannel:     fr.NextChannel,
-				CompleteChannel: fr.CompleteChannel,
-				CancelChannel:   fr.CancelChannel,
+				Errors:           fr.Errors,
+				StartRowsChannel: fr.StartRowsChannel,
+				RowChannel:       fr.RowChannel,
+				NextChannel:      fr.NextChannel,
+				CompleteChannel:  fr.CompleteChannel,
+				CancelChannel:    fr.CancelChannel,
 			}
 			results[fr.Index] = conRes
 		case <-timeout:
