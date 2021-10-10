@@ -954,7 +954,6 @@ func TestSQLServerConcurrentFetch(t *testing.T) {
 					first_name string
 				)
 				row.Scan(&id, &first_name)
-				fmt.Println(id, first_name)
 				nextChannel <- true
 			case <-completeChannel:
 				complete = true
