@@ -33,7 +33,7 @@ bezsql.SetConnections(map[string]bezsql.Config{
         Username: "sa",
         Password: "sapassword",
         Database: "test",
-    }
+    },
 })
 ```
 
@@ -225,7 +225,7 @@ db.WhereInList("field3", []interface{}{
 // create new query on the same database
 subWhereInDb := db.NewQuery()
 
-//if using a database that required named parameters then you can use the SetParamPrefix
+//if using a database that requires named parameters then you can use the SetParamPrefix
 //method to change the default prefix
 subWhereInDb.SetParamPrefix("subParam")
 // parameterize values will now be prefixed with "subParam", e.g. @subParam1 
