@@ -3,6 +3,11 @@ Go SQL query package for handling connections &amp; building and running queries
 
 Built as learning project for Golang.
 
+Currently supports:
+
+* MySQL / MariaDB
+* SQL Server
+
 ## Usage
 
 ### Set Database Connections
@@ -13,7 +18,7 @@ You can define multiple database connections here.
 
 ```go
 bezsql.SetConnections(map[string]bezsql.Config{
-    "test": {
+    "mysql": {
         Type:     "MySQL",
         Host:     "localhost",
         Port:     3306,
@@ -21,6 +26,14 @@ bezsql.SetConnections(map[string]bezsql.Config{
         Password: "",
         Database: "test",
     },
+    "sql_server": {
+        Type:     "SQLServer",
+        Host:     "localhost",
+        Port:     1433,
+        Username: "sa",
+        Password: "sapassword",
+        Database: "test",
+    }
 })
 ```
 
@@ -211,6 +224,13 @@ db.WhereInList("field3", []interface{}{
 
 // create new query on the same database
 subWhereInDb := db.NewQuery()
+
+//if using a database that required named parameters then you can use the SetParamPrefix
+//method to change the default prefix
+subWhereInDb.SetParamPrefix("subParam")
+// parameterize values will now be prefixed with "subParam", e.g. @subParam1 
+
+
 subWhereInDb.Table("user_posts")
 subWhereInDb.Cols([]string{
     subWhereInDb.Count("id", "number"),
@@ -358,6 +378,8 @@ Inserting records is done using the following methods:
 * Insert
 * InsertMulti
 
+The Save method is used to execute the query after setting the required values.
+
 ```go
 userDb, _ := bezsql.Open("test")
 userDb.Table("users")
@@ -401,5 +423,37 @@ firstInsertedId, err = res.LastInsertId()
 
 ### Updating Records
 
+Updates can be performed using the Update method combined with the various condition methods.
+
+The Save method is used to execute the query.
+
+```go
+db.Update(map[string]interface{}{
+    "name": "new name",
+}, true)
+
+db.Where("id", "=", 10, true)
+result, err := db.Save()
+
+if err != nil {
+    //error handling
+}
+
+affectedRows := result.AffectedRows()
+```
 
 ### Deleting Records
+
+Deleting records can be done by initialising a query on a table, adding the required conditions, and then executing the Delete method.
+
+```go
+db.Table("users")
+db.Where("id", "=", 10, true)
+result, err := db.Delete()
+
+if err != nil {
+    //error handling
+}
+
+affectedRows := result.AffectedRows()
+```
