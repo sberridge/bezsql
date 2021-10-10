@@ -265,7 +265,7 @@ func init() {
 
 }
 
-func TestSelect(t *testing.T) {
+func TestMySQLSelect(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -294,7 +294,7 @@ func TestSelect(t *testing.T) {
 	}
 }
 
-func TestSelectBasicWhere(t *testing.T) {
+func TestMySQLSelectBasicWhere(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -327,7 +327,7 @@ func TestSelectBasicWhere(t *testing.T) {
 	}
 }
 
-func TestSelectComplexWhere(t *testing.T) {
+func TestMySQLSelectComplexWhere(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -371,7 +371,7 @@ func TestSelectComplexWhere(t *testing.T) {
 	}
 }
 
-func TestSelectWhereNull(t *testing.T) {
+func TestMySQLSelectWhereNull(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -406,7 +406,7 @@ func TestSelectWhereNull(t *testing.T) {
 	}
 }
 
-func TestSelectWhereNotNull(t *testing.T) {
+func TestMySQLSelectWhereNotNull(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -441,7 +441,7 @@ func TestSelectWhereNotNull(t *testing.T) {
 	}
 }
 
-func TestSelectWhereInList(t *testing.T) {
+func TestMySQLSelectWhereInList(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -477,7 +477,7 @@ func TestSelectWhereInList(t *testing.T) {
 	}
 }
 
-func TestSelectWhereNotInList(t *testing.T) {
+func TestMySQLSelectWhereNotInList(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -513,7 +513,7 @@ func TestSelectWhereNotInList(t *testing.T) {
 	}
 }
 
-func TestSelectWhereInSub(t *testing.T) {
+func TestMySQLSelectWhereInSub(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -551,7 +551,7 @@ func TestSelectWhereInSub(t *testing.T) {
 
 }
 
-func TestSelectWhereNotInSub(t *testing.T) {
+func TestMySQLSelectWhereNotInSub(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -589,7 +589,7 @@ func TestSelectWhereNotInSub(t *testing.T) {
 
 }
 
-func TestInsertAndDelete(t *testing.T) {
+func TestMySQLInsertAndDelete(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -614,7 +614,7 @@ func TestInsertAndDelete(t *testing.T) {
 	}
 }
 
-func TestInsertMultiAndDelete(t *testing.T) {
+func TestMySQLInsertMultiAndDelete(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -652,7 +652,7 @@ func TestInsertMultiAndDelete(t *testing.T) {
 
 }
 
-func TestUpdate(t *testing.T) {
+func TestMySQLUpdate(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -669,7 +669,7 @@ func TestUpdate(t *testing.T) {
 	}
 }
 
-func TestStandardJoin(t *testing.T) {
+func TestMySQLStandardJoin(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -699,7 +699,7 @@ func TestStandardJoin(t *testing.T) {
 	}
 }
 
-func TestStandardLeftJoin(t *testing.T) {
+func TestMySQLStandardLeftJoin(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -736,7 +736,7 @@ func TestStandardLeftJoin(t *testing.T) {
 	}
 }
 
-func TestQueryJoin(t *testing.T) {
+func TestMySQLQueryJoin(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -774,7 +774,7 @@ func TestQueryJoin(t *testing.T) {
 	}
 }
 
-func TestSubJoin(t *testing.T) {
+func TestMySQLSubJoin(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -814,7 +814,7 @@ func TestSubJoin(t *testing.T) {
 	}
 }
 
-func TestOrdering(t *testing.T) {
+func TestMySQLOrdering(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -837,7 +837,7 @@ func TestOrdering(t *testing.T) {
 	}
 }
 
-func TestGrouping(t *testing.T) {
+func TestMySQLGrouping(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -859,7 +859,7 @@ func TestGrouping(t *testing.T) {
 	}
 }
 
-func TestLimitOffset(t *testing.T) {
+func TestMySQLLimitOffset(t *testing.T) {
 	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
@@ -912,7 +912,7 @@ func TestLimitOffset(t *testing.T) {
 
 }
 
-func TestConcurrentFetch(t *testing.T) {
+func TestMySQLConcurrentFetch(t *testing.T) {
 	db, _ := Open("mysql_test")
 	db.Table("users")
 	db.Cols([]string{
@@ -945,15 +945,7 @@ func TestConcurrentFetch(t *testing.T) {
 	}
 }
 
-func joinErrors(errors []error) string {
-	errorStrings := []string{}
-	for _, err := range errors {
-		errorStrings = append(errorStrings, err.Error())
-	}
-	return strings.Join(errorStrings, ", ")
-}
-
-func TestConcurrentMultiFetch(t *testing.T) {
+func TestMySQLConcurrentMultiFetch(t *testing.T) {
 	db1, _ := Open("mysql_test")
 	db1.Table("users")
 	db1.Cols([]string{
@@ -1079,7 +1071,7 @@ func TestConcurrentMultiFetch(t *testing.T) {
 	}
 }
 
-func runConcurrent() {
+func runMySQLConcurrent() {
 
 	queries := []DB{}
 	for i := 0; i < 20; i++ {
@@ -1124,7 +1116,7 @@ func runConcurrent() {
 	}
 }
 
-func runNonConcurrent() {
+func runMySQLNonConcurrent() {
 	for i := 0; i < 20; i++ {
 		db, _ := Open("mysql_test")
 		db.Table("users")
@@ -1140,12 +1132,12 @@ func runNonConcurrent() {
 
 func BenchmarkConc(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		runConcurrent()
+		runMySQLConcurrent()
 	}
 }
 
 func BenchmarkNonConc(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		runNonConcurrent()
+		runMySQLNonConcurrent()
 	}
 }

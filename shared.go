@@ -1,5 +1,7 @@
 package bezsql
 
+import "strings"
+
 type QueryFunc func(*Query)
 
 type join struct {
@@ -13,4 +15,12 @@ type join struct {
 type orderBy struct {
 	Field     string
 	Direction string
+}
+
+func joinErrors(errors []error) string {
+	errorStrings := []string{}
+	for _, err := range errors {
+		errorStrings = append(errorStrings, err.Error())
+	}
+	return strings.Join(errorStrings, ", ")
 }

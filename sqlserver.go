@@ -171,6 +171,7 @@ func (db *SQLServer) Count(col string, alias string) string {
 
 func (db *SQLServer) NewQuery() (DB, error) {
 	newDB := SQLServer{}
+	newDB.SetParamPrefix("param")
 	_, err := newDB.Connect(db.databaseName, db.usedConfig)
 	if err != nil {
 		return nil, err
@@ -195,6 +196,7 @@ func (db *SQLServer) Clone() (DB, error) {
 	newDB.multiInsertValues = db.multiInsertValues
 	newDB.ordering = db.ordering
 	newDB.params = db.params
+	newDB.paramNames = db.paramNames
 	newDB.query = db.query
 	newDB.parallel = db.parallel
 
@@ -226,13 +228,16 @@ func (db *SQLServer) Connect(databaseName string, config Config) (bool, error) {
 
 func (db *SQLServer) Insert(values map[string]interface{}, escape bool) {
 	var params []interface{}
+	paramNames := []string{}
 	insertColumns := []string{}
 	insertValues := []string{}
 	for key, val := range values {
 		insertColumns = append(insertColumns, db.checkReserved(key))
 		if escape {
 			params = append(params, val)
-			insertValues = append(insertValues, "?")
+			paramName := fmt.Sprintf("insert%d", len(params))
+			insertValues = append(insertValues, fmt.Sprintf("@%s", paramName))
+			paramNames = append(paramNames, paramName)
 		} else {
 			switch v := val.(type) {
 			case string:
@@ -241,6 +246,7 @@ func (db *SQLServer) Insert(values map[string]interface{}, escape bool) {
 		}
 	}
 	db.params = params
+	db.paramNames = paramNames
 	db.insertColumns = insertColumns
 	db.insertValues = insertValues
 }
@@ -338,6 +344,7 @@ func (db *SQLServer) LeftJoinSub(subSql DB, alias string, primaryKey string, for
 
 func (db *SQLServer) addQueryTableJoin(joinType string, tableName string, queryFunc QueryFunc) {
 	q := Query{}
+	q.SetParamPrefix(db.query.paramPrefix)
 	queryFunc(&q)
 	db.joins = append(db.joins, join{
 		Type:  joinType,
@@ -491,20 +498,15 @@ func (db *SQLServer) GenerateSelect() string {
 		}
 		query += strings.Join(orderStrings, ", ")
 
-		if db.offsetBy > 0 {
-			query += fmt.Sprintf(" OFFSET %d ROWS ", db.offsetBy)
-		}
 		if db.limitBy > 0 {
-
+			query += fmt.Sprintf(" OFFSET %d ROWS ", db.offsetBy)
 			query += fmt.Sprintf(" FETCH NEXT %d ROWS ONLY ", db.limitBy)
-
 		}
 
 	}
 
 	db.params = params
 	db.paramNames = paramNames
-	fmt.Println("gen", paramNames, db.paramNames, db.query)
 	return query
 }
 func (db *SQLServer) GenerateInsert() string {
@@ -519,6 +521,7 @@ func (db *SQLServer) GenerateInsert() string {
 		}
 		query += strings.Join(insertRows, ",")
 	}
+	query += "; select isNull(SCOPE_IDENTITY(), -1);"
 	return query
 }
 func (db *SQLServer) GenerateUpdate() string {
@@ -544,14 +547,49 @@ func (db *SQLServer) GenerateDelete() string {
 	return query
 }
 
+//result response doesn't include last insert id in SQL Server so creating a custom implementation
+type sqlServerResult struct {
+	rowsAffected int64
+	lastInsertId int64
+	err          error
+}
+
+func (result *sqlServerResult) RowsAffected() (int64, error) {
+	return result.rowsAffected, result.err
+}
+func (result *sqlServerResult) LastInsertId() (int64, error) {
+	return result.lastInsertId, result.err
+}
+
 func (db *SQLServer) Save() (sql.Result, error) {
 	var query string
+	sqlResult := sqlServerResult{}
 	if len(db.insertValues) > 0 || len(db.multiInsertValues) > 0 {
 		query = db.GenerateInsert()
+		fetchRes, close, err := db.executeQuery(query)
+		if err != nil {
+			sqlResult.err = err
+			return &sqlResult, err
+		}
+		defer close()
+		var lastId int64
+		for fetchRes.Next() {
+			fetchRes.Scan(&lastId)
+		}
+
+		var affectedRows int64
+		affectedRows = 1
+		if len(db.multiInsertValues) > 0 {
+			affectedRows = int64(len(db.multiInsertValues))
+		}
+		lastId -= (affectedRows - 1)
+		sqlResult.lastInsertId = lastId
+		sqlResult.rowsAffected = affectedRows
 	} else if len(db.updateValues) > 0 {
 		query = db.GenerateUpdate()
+		return db.executeNonQuery(query)
 	}
-	return db.executeNonQuery(query)
+	return &sqlResult, nil
 }
 func (db *SQLServer) Fetch() (*sql.Rows, context.CancelFunc, error) {
 
@@ -641,7 +679,6 @@ func (db *SQLServer) executeQuery(query string) (*sql.Rows, context.CancelFunc, 
 	}
 
 	var namedParameters []interface{}
-	fmt.Println(db.paramNames)
 	for i, param := range db.params {
 		namedParameters = append(namedParameters, sql.Named(db.paramNames[i], param))
 	}
