@@ -9,7 +9,7 @@ import (
 
 func init() {
 	SetConnections(map[string]Config{
-		"mssql_test": {
+		"sqlserver_test": {
 			Type:     "SQLServer",
 			Host:     "localhost",
 			Port:     1433,
@@ -26,31 +26,32 @@ func init() {
 			Database: "test",
 		},
 	})
-	db, err := Open("mysql_test")
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		panic("no test database found")
 	}
-
 	var params []interface{}
 	if t, err := db.DoesTableExist("users"); err == nil && !t {
 		createTableQuery := strings.Join([]string{
-			"CREATE TABLE IF NOT EXISTS `users` (",
-			"`id` INT NOT NULL AUTO_INCREMENT,",
-			"`title_id` INT NOT NULL,",
-			"`first_name` VARCHAR(50) NOT NULL,",
-			"`surname` VARCHAR(50) NOT NULL,",
-			"`email` VARCHAR(200) DEFAULT NULL,",
-			"`gender_id` int NOT NULL,",
-			"`date_of_birth` DATETIME NOT NULL,",
-			"`phone_number` VARCHAR(50) NOT NULL,",
-			"`city_id` int NOT NULL,",
-			"`country_id` int DEFAULT NULL,",
-			"`postcode` VARCHAR(100) NOT NULL,",
-			"`street_address` VARCHAR(100) NOT NULL,",
-			"`active` TINYINT(1) DEFAULT 0,",
-			"PRIMARY KEY (`id`)",
-			")",
-			"COLLATE='utf8mb4_general_ci';",
+			"CREATE TABLE [dbo].[users](",
+			"[id] [int] IDENTITY(1,1) NOT NULL,",
+			"[title_id] [int] NOT NULL,",
+			"[first_name] [varchar](50) NOT NULL,",
+			"[surname] [varchar](50) NOT NULL,",
+			"[email] [varchar](200) NULL,",
+			"[gender_id] [int] NOT NULL,",
+			"[date_of_birth] [datetime] NOT NULL,",
+			"[phone_number] [varchar](50) NOT NULL,",
+			"[city_id] [int] NOT NULL,",
+			"[country_id] [int] NULL,",
+			"[postcode] [varchar](100) NOT NULL,",
+			"[street_address] [varchar](100) NOT NULL,",
+			"[active] [tinyint] DEFAULT 0,",
+			"CONSTRAINT [PK_users] PRIMARY KEY CLUSTERED",
+			"(",
+			"[id] ASC",
+			")WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]",
+			") ON [PRIMARY]",
 		}, "")
 		_, er := db.RawNonQuery(createTableQuery, params)
 		if er != nil {
@@ -87,12 +88,14 @@ func init() {
 
 	if t, err := db.DoesTableExist("titles"); err == nil && !t {
 		createTableQuery := strings.Join([]string{
-			"CREATE TABLE `titles` (",
-			"`id` INT NOT NULL AUTO_INCREMENT,",
-			"`title` VARCHAR(10) NOT NULL,",
-			"PRIMARY KEY (`id`)",
-			")",
-			"COLLATE='utf8mb4_general_ci';",
+			"CREATE TABLE [dbo].[titles](",
+			"[id] [int] IDENTITY(1,1) NOT NULL,",
+			"[title] [varchar](10) NOT NULL,",
+			"CONSTRAINT [PK_titles] PRIMARY KEY CLUSTERED",
+			"(",
+			"[id] ASC",
+			")WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]",
+			") ON [PRIMARY]",
 		}, "")
 		db.RawNonQuery(createTableQuery, params)
 	} else {
@@ -108,12 +111,14 @@ func init() {
 
 	if t, err := db.DoesTableExist("genders"); err == nil && !t {
 		createTableQuery := strings.Join([]string{
-			"CREATE TABLE `genders` (",
-			"`id` INT NOT NULL AUTO_INCREMENT,",
-			"`gender` VARCHAR(10) NOT NULL,",
-			"PRIMARY KEY (`id`)",
-			")",
-			"COLLATE='utf8mb4_general_ci';",
+			"CREATE TABLE [dbo].[genders](",
+			"[id] [int] IDENTITY(1,1) NOT NULL,",
+			"[gender] [varchar](10) NOT NULL,",
+			"CONSTRAINT [PK_genders] PRIMARY KEY CLUSTERED",
+			"(",
+			"[id] ASC",
+			")WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]",
+			") ON [PRIMARY]",
 		}, "")
 		db.RawNonQuery(createTableQuery, params)
 	} else {
@@ -134,12 +139,14 @@ func init() {
 
 	if t, err := db.DoesTableExist("countries"); err == nil && !t {
 		createTableQuery := strings.Join([]string{
-			"CREATE TABLE `countries` (",
-			"`id` INT NOT NULL AUTO_INCREMENT,",
-			"`country` VARCHAR(50) NOT NULL,",
-			"PRIMARY KEY (`id`)",
-			")",
-			"COLLATE='utf8mb4_general_ci';",
+			"CREATE TABLE [dbo].[countries](",
+			"[id] [int] IDENTITY(1,1) NOT NULL,",
+			"[country] [varchar](50) NOT NULL,",
+			"CONSTRAINT [PK_countries] PRIMARY KEY CLUSTERED",
+			"(",
+			"[id] ASC",
+			")WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]",
+			") ON [PRIMARY]",
 		}, "")
 		db.RawNonQuery(createTableQuery, params)
 	} else {
@@ -155,12 +162,14 @@ func init() {
 
 	if t, err := db.DoesTableExist("cities"); err == nil && !t {
 		createTableQuery := strings.Join([]string{
-			"CREATE TABLE `cities` (",
-			"`id` INT NOT NULL AUTO_INCREMENT,",
-			"`city` VARCHAR(50) NOT NULL,",
-			"PRIMARY KEY (`id`)",
-			")",
-			"COLLATE='utf8mb4_general_ci';",
+			"CREATE TABLE [dbo].[cities](",
+			"[id] [int] IDENTITY(1,1) NOT NULL,",
+			"[city] [varchar](50) NOT NULL,",
+			"CONSTRAINT [PK_cities] PRIMARY KEY CLUSTERED",
+			"(",
+			"[id] ASC",
+			")WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]",
+			") ON [PRIMARY]",
 		}, "")
 		db.RawNonQuery(createTableQuery, params)
 	} else {
@@ -183,12 +192,14 @@ func init() {
 
 	if t, err := db.DoesTableExist("user_settings"); err == nil && !t {
 		createTableQuery := strings.Join([]string{
-			"CREATE TABLE `user_settings` (",
-			"`id` INT NOT NULL AUTO_INCREMENT,",
-			"`user_id` INT NOT NULL,",
-			"PRIMARY KEY (`id`)",
-			")",
-			"COLLATE='utf8mb4_general_ci';",
+			"CREATE TABLE [dbo].[user_settings](",
+			"[id] [int] IDENTITY(1,1) NOT NULL,",
+			"[user_id] [int] NOT NULL,",
+			"CONSTRAINT [PK_user_settings] PRIMARY KEY CLUSTERED",
+			"(",
+			"[id] ASC",
+			")WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]",
+			") ON [PRIMARY]",
 		}, "")
 		db.RawNonQuery(createTableQuery, params)
 	} else {
@@ -211,13 +222,15 @@ func init() {
 
 	if t, err := db.DoesTableExist("parties"); err == nil && !t {
 		createTableQuery := strings.Join([]string{
-			"CREATE TABLE `parties` (",
-			"`id` INT NOT NULL AUTO_INCREMENT,",
-			"`date` DATETIME NOT NULL,",
-			"`city_id` INT NOT NULL,",
-			"PRIMARY KEY (`id`)",
-			")",
-			"COLLATE='utf8mb4_general_ci';",
+			"CREATE TABLE [dbo].[parties](",
+			"[id] [int] IDENTITY(1,1) NOT NULL,",
+			"[date] [datetime] NOT NULL,",
+			"[city_id] [int] NOT NULL,",
+			"CONSTRAINT [PK_parties] PRIMARY KEY CLUSTERED",
+			"(",
+			"[id] ASC",
+			")WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]",
+			") ON [PRIMARY]",
 		}, "")
 		db.RawNonQuery(createTableQuery, params)
 	} else {
@@ -234,14 +247,16 @@ func init() {
 
 	if t, err := db.DoesTableExist("party_guests"); err == nil && !t {
 		createTableQuery := strings.Join([]string{
-			"CREATE TABLE `party_guests` (",
-			"`id` INT NOT NULL AUTO_INCREMENT,",
-			"`user_id` INT NOT NULL,",
-			"`party_id` INT NOT NULL,",
-			"`accepted` TINYINT(1) NOT NULL DEFAULT 0,",
-			"PRIMARY KEY (`id`)",
-			")",
-			"COLLATE='utf8mb4_general_ci';",
+			"CREATE TABLE [dbo].[party_guests](",
+			"[id] [int] IDENTITY(1,1) NOT NULL,",
+			"[party_id] [int] NOT NULL,",
+			"[user_id] [int] NOT NULL,",
+			"[accepted] [tinyint] NOT NULL DEFAULT 0,",
+			"CONSTRAINT [PK_party_guests] PRIMARY KEY CLUSTERED",
+			"(",
+			"[id] ASC",
+			")WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]",
+			") ON [PRIMARY]",
 		}, "")
 		db.RawNonQuery(createTableQuery, params)
 	} else {
@@ -265,8 +280,8 @@ func init() {
 
 }
 
-func TestMySQLSelect(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerSelect(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -294,8 +309,8 @@ func TestMySQLSelect(t *testing.T) {
 	}
 }
 
-func TestMySQLSelectBasicWhere(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerSelectBasicWhere(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -327,8 +342,8 @@ func TestMySQLSelectBasicWhere(t *testing.T) {
 	}
 }
 
-func TestMySQLSelectComplexWhere(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerSelectComplexWhere(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -371,8 +386,8 @@ func TestMySQLSelectComplexWhere(t *testing.T) {
 	}
 }
 
-func TestMySQLSelectWhereNull(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerSelectWhereNull(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -406,8 +421,8 @@ func TestMySQLSelectWhereNull(t *testing.T) {
 	}
 }
 
-func TestMySQLSelectWhereNotNull(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerSelectWhereNotNull(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -441,8 +456,8 @@ func TestMySQLSelectWhereNotNull(t *testing.T) {
 	}
 }
 
-func TestMySQLSelectWhereInList(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerSelectWhereInList(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -477,8 +492,8 @@ func TestMySQLSelectWhereInList(t *testing.T) {
 	}
 }
 
-func TestMySQLSelectWhereNotInList(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerSelectWhereNotInList(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -513,8 +528,8 @@ func TestMySQLSelectWhereNotInList(t *testing.T) {
 	}
 }
 
-func TestMySQLSelectWhereInSub(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerSelectWhereInSub(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -524,6 +539,7 @@ func TestMySQLSelectWhereInSub(t *testing.T) {
 	})
 
 	subDb, _ := db.NewQuery()
+	subDb.SetParamPrefix("gendersSub")
 	subDb.Table("genders")
 	subDb.Cols([]string{
 		"id",
@@ -551,8 +567,8 @@ func TestMySQLSelectWhereInSub(t *testing.T) {
 
 }
 
-func TestMySQLSelectWhereNotInSub(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerSelectWhereNotInSub(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -562,6 +578,7 @@ func TestMySQLSelectWhereNotInSub(t *testing.T) {
 	})
 
 	subDb, _ := db.NewQuery()
+	subDb.SetParamPrefix("gendersSub")
 	subDb.Table("genders")
 	subDb.Cols([]string{
 		"id",
@@ -589,8 +606,8 @@ func TestMySQLSelectWhereNotInSub(t *testing.T) {
 
 }
 
-func TestMySQLInsertAndDelete(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerInsertAndDelete(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -614,8 +631,8 @@ func TestMySQLInsertAndDelete(t *testing.T) {
 	}
 }
 
-func TestMySQLInsertMultiAndDelete(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerInsertMultiAndDelete(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -652,8 +669,8 @@ func TestMySQLInsertMultiAndDelete(t *testing.T) {
 
 }
 
-func TestMySQLUpdate(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerUpdate(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -669,8 +686,8 @@ func TestMySQLUpdate(t *testing.T) {
 	}
 }
 
-func TestMySQLStandardJoin(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerStandardJoin(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -699,8 +716,8 @@ func TestMySQLStandardJoin(t *testing.T) {
 	}
 }
 
-func TestMySQLStandardLeftJoin(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerStandardLeftJoin(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -736,8 +753,8 @@ func TestMySQLStandardLeftJoin(t *testing.T) {
 	}
 }
 
-func TestMySQLQueryJoin(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerQueryJoin(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -774,8 +791,8 @@ func TestMySQLQueryJoin(t *testing.T) {
 	}
 }
 
-func TestMySQLSubJoin(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerSubJoin(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -786,6 +803,7 @@ func TestMySQLSubJoin(t *testing.T) {
 		"g.accepted",
 	})
 	subDb, _ := db.NewQuery()
+	subDb.SetParamPrefix("partyGuestsSub")
 	subDb.Table("party_guests")
 	subDb.Cols([]string{
 		"user_id",
@@ -814,8 +832,8 @@ func TestMySQLSubJoin(t *testing.T) {
 	}
 }
 
-func TestMySQLOrdering(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerOrdering(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -837,8 +855,8 @@ func TestMySQLOrdering(t *testing.T) {
 	}
 }
 
-func TestMySQLGrouping(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerGrouping(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -859,8 +877,8 @@ func TestMySQLGrouping(t *testing.T) {
 	}
 }
 
-func TestMySQLLimitOffset(t *testing.T) {
-	db, err := Open("mysql_test")
+func TestSQLServerLimitOffset(t *testing.T) {
+	db, err := Open("sqlserver_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -912,8 +930,8 @@ func TestMySQLLimitOffset(t *testing.T) {
 
 }
 
-func TestMySQLConcurrentFetch(t *testing.T) {
-	db, _ := Open("mysql_test")
+func TestSQLServerConcurrentFetch(t *testing.T) {
+	db, _ := Open("sqlserver_test")
 	db.Table("users")
 	db.Cols([]string{
 		"id",
@@ -929,8 +947,14 @@ func TestMySQLConcurrentFetch(t *testing.T) {
 		complete := false
 		for {
 			select {
-			case <-rowChannel:
+			case row := <-rowChannel:
 				numRows++
+				var (
+					id         int
+					first_name string
+				)
+				row.Scan(&id, &first_name)
+				fmt.Println(id, first_name)
 				nextChannel <- true
 			case <-completeChannel:
 				complete = true
@@ -945,8 +969,8 @@ func TestMySQLConcurrentFetch(t *testing.T) {
 	}
 }
 
-func TestMySQLConcurrentMultiFetch(t *testing.T) {
-	db1, _ := Open("mysql_test")
+func TestSQLServerConcurrentMultiFetch(t *testing.T) {
+	db1, _ := Open("sqlserver_test")
 	db1.Table("users")
 	db1.Cols([]string{
 		"id",
@@ -1071,11 +1095,11 @@ func TestMySQLConcurrentMultiFetch(t *testing.T) {
 	}
 }
 
-func runMySQLConcurrent() {
+func runSQLServerConcurrent() {
 
 	queries := []DB{}
 	for i := 0; i < 20; i++ {
-		db, _ := Open("mysql_test")
+		db, _ := Open("sqlserver_test")
 		db.Table("users")
 		db.Cols([]string{
 			"id",
@@ -1116,9 +1140,9 @@ func runMySQLConcurrent() {
 	}
 }
 
-func runMySQLNonConcurrent() {
+func runSQLServerNonConcurrent() {
 	for i := 0; i < 20; i++ {
-		db, _ := Open("mysql_test")
+		db, _ := Open("sqlserver_test")
 		db.Table("users")
 		db.Cols([]string{
 			"id",
@@ -1130,14 +1154,14 @@ func runMySQLNonConcurrent() {
 	}
 }
 
-func BenchmarkConc(b *testing.B) {
+func BenchmarkSQLServerConc(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		runMySQLConcurrent()
+		runSQLServerConcurrent()
 	}
 }
 
-func BenchmarkNonConc(b *testing.B) {
+func BenchmarkSQLServerNonConc(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		runMySQLNonConcurrent()
+		runSQLServerNonConcurrent()
 	}
 }

@@ -2,6 +2,7 @@ package bezsql
 
 import (
 	"errors"
+	"fmt"
 )
 
 var connectionConfigs map[string]Config = make(map[string]Config)
@@ -19,12 +20,18 @@ func Open(database string) (DB, error) {
 	var db DB
 	dbConfig := connectionConfigs[database]
 	dbType := dbConfig.Type
-	if dbType == "MySQL" {
+	switch dbType {
+	case "MySQL":
 		db = &MySQL{}
-		_, err := db.Connect(database, dbConfig)
-		if err != nil {
-			return nil, err
-		}
+	case "SQLServer":
+		db = &SQLServer{}
+		db.SetParamPrefix("param")
+	}
+
+	_, err := db.Connect(database, dbConfig)
+	if err != nil {
+		fmt.Println(err.Error())
+		return nil, err
 	}
 
 	return db, nil

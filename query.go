@@ -12,9 +12,19 @@ type where struct {
 	Value      interface{}
 	Escape     bool
 	Params     []interface{}
+	NamedParam string
+	ParamNames []string
 }
 type Query struct {
-	wheres []where
+	useNamedParams bool
+	paramPrefix    string
+	paramNum       int
+	wheres         []where
+}
+
+func (q *Query) SetParamPrefix(prefix string) {
+	q.paramPrefix = prefix
+	q.useNamedParams = true
 }
 
 func (q *Query) Where(field string, comparator string, value interface{}, escape bool) {
@@ -24,6 +34,10 @@ func (q *Query) Where(field string, comparator string, value interface{}, escape
 		Comparator: comparator,
 		Value:      value,
 		Escape:     escape}
+	if q.useNamedParams && escape {
+		q.paramNum++
+		w.NamedParam = fmt.Sprintf("%s%d", q.paramPrefix, q.paramNum)
+	}
 	q.wheres = append(q.wheres, w)
 }
 
@@ -54,6 +68,7 @@ func (q *Query) WhereNotNull(field string) {
 func (q *Query) addWhereInList(inType string, field string, values []interface{}, escape bool) {
 	valueString := ""
 	var params []interface{}
+	paramPrefixes := []string{}
 	if !escape {
 		stringValues := []string{}
 		for _, value := range values {
@@ -67,7 +82,15 @@ func (q *Query) addWhereInList(inType string, field string, values []interface{}
 	} else {
 		var valueSlice []string
 		for i := 0; i < len(values); i++ {
-			valueSlice = append(valueSlice, "?")
+			if q.useNamedParams {
+				q.paramNum++
+				paramName := fmt.Sprintf("%s%d", q.paramPrefix, q.paramNum)
+				paramPrefixes = append(paramPrefixes, paramName)
+				valueSlice = append(valueSlice, fmt.Sprintf("@%s", paramName))
+			} else {
+				valueSlice = append(valueSlice, "?")
+			}
+
 		}
 		valueString = fmt.Sprintf(" (%s) ", strings.Join(valueSlice, ","))
 		params = values
@@ -78,7 +101,9 @@ func (q *Query) addWhereInList(inType string, field string, values []interface{}
 		Comparator: inType,
 		Value:      valueString,
 		Escape:     false,
-		Params:     params})
+		Params:     params,
+		ParamNames: paramPrefixes,
+	})
 }
 
 func (q *Query) WhereInList(field string, values []interface{}, escape bool) {
@@ -92,6 +117,7 @@ func (q *Query) WhereNotInList(field string, values []interface{}, escape bool) 
 func (q *Query) addWhereInSub(inType string, field string, subQuery DB) {
 	valueString := fmt.Sprintf(" (%s) ", subQuery.GenerateSelect())
 	params := subQuery.GetParams()
+	paramNames := subQuery.GetParamNames()
 	q.wheres = append(q.wheres, where{
 		Type:       "where",
 		Field:      field,
@@ -99,6 +125,7 @@ func (q *Query) addWhereInSub(inType string, field string, subQuery DB) {
 		Value:      valueString,
 		Escape:     false,
 		Params:     params,
+		ParamNames: paramNames,
 	})
 }
 
@@ -134,11 +161,12 @@ func (q *Query) CloseBracket() {
 		Comparator: ")"})
 }
 
-func (q *Query) ApplyWheres() (string, []interface{}) {
+func (q *Query) ApplyWheres() (string, []interface{}, []string) {
 	whereString := " "
 	var params []interface{}
+	paramNames := []string{}
 	if len(q.wheres) == 0 {
-		return whereString, params
+		return whereString, params, paramNames
 	}
 	first := true
 	logic := "AND"
@@ -151,13 +179,22 @@ func (q *Query) ApplyWheres() (string, []interface{}) {
 			first = false
 			whereString += fmt.Sprintf(" %s %s ", w.Field, w.Comparator)
 			if w.Escape {
-				whereString += " ? "
+				if q.useNamedParams {
+					whereString += fmt.Sprintf(" @%s ", w.NamedParam)
+					paramNames = append(paramNames, w.NamedParam)
+				} else {
+					whereString += " ? "
+				}
 				params = append(params, w.Value)
+
 			} else {
 				whereString += fmt.Sprintf(" %s ", w.Value)
 			}
 			if len(w.Params) > 0 {
 				params = append(params, w.Params...)
+				if q.useNamedParams {
+					paramNames = append(paramNames, w.ParamNames...)
+				}
 			}
 		case "logic":
 			logic = w.Comparator
@@ -168,5 +205,5 @@ func (q *Query) ApplyWheres() (string, []interface{}) {
 			whereString += fmt.Sprintf(" %s ", w.Comparator)
 		}
 	}
-	return whereString, params
+	return whereString, params, paramNames
 }

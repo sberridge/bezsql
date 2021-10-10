@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-sql-driver/mysql"
+	_ "github.com/denisenkom/go-mssqldb"
 )
 
-var mysqlConnections map[string]*sql.DB = make(map[string]*sql.DB)
+var sqlServerConnections map[string]*sql.DB = make(map[string]*sql.DB)
 
-type MySQL struct {
+type SQLServer struct {
 	databaseName      string
 	usedConfig        Config
 	table             string
@@ -32,11 +32,11 @@ type MySQL struct {
 	parallel          bool
 }
 
-func (db *MySQL) SetParamPrefix(prefix string) {
+func (db *SQLServer) SetParamPrefix(prefix string) {
 	db.query.SetParamPrefix(prefix)
 }
 
-func (db *MySQL) DoesTableExist(table string) (bool, error) {
+func (db *SQLServer) DoesTableExist(table string) (bool, error) {
 	newDb, err := db.NewQuery()
 	if err != nil {
 		return false, err
@@ -46,7 +46,7 @@ func (db *MySQL) DoesTableExist(table string) (bool, error) {
 	newDb.Cols([]string{
 		"COUNT(*) num",
 	})
-	newDb.Where("TABLE_SCHEMA", "=", config.Database, true)
+	newDb.Where("TABLE_CATALOG", "=", config.Database, true)
 	newDb.Where("TABLE_NAME", "=", table, true)
 	res, close, err := newDb.Fetch()
 	if err != nil {
@@ -63,11 +63,11 @@ func (db *MySQL) DoesTableExist(table string) (bool, error) {
 	return false, nil
 }
 
-func (db *MySQL) RunParallel() {
+func (db *SQLServer) RunParallel() {
 	db.parallel = true
 }
 
-func (db *MySQL) DoesColumnExist(table string, field string) (bool, error) {
+func (db *SQLServer) DoesColumnExist(table string, field string) (bool, error) {
 	newDb, err := db.NewQuery()
 	if err != nil {
 		return false, err
@@ -77,7 +77,7 @@ func (db *MySQL) DoesColumnExist(table string, field string) (bool, error) {
 	newDb.Cols([]string{
 		"COUNT(*) num",
 	})
-	newDb.Where("TABLE_SCHEMA", "=", config.Database, true)
+	newDb.Where("TABLE_CATALOG", "=", config.Database, true)
 	newDb.Where("TABLE_NAME", "=", table, true)
 	newDb.Where("COLUMN_NAME", "=", field, true)
 	res, close, err := newDb.Fetch()
@@ -95,33 +95,33 @@ func (db *MySQL) DoesColumnExist(table string, field string) (bool, error) {
 	return false, nil
 }
 
-func (db *MySQL) GetConfig() Config {
+func (db *SQLServer) GetConfig() Config {
 	return db.usedConfig
 }
 
-func (db *MySQL) RawQuery(query string, params []interface{}) (*sql.Rows, context.CancelFunc, error) {
+func (db *SQLServer) RawQuery(query string, params []interface{}) (*sql.Rows, context.CancelFunc, error) {
 	db.params = params
 	return db.executeQuery(query)
 }
 
-func (db *MySQL) RawNonQuery(query string, params []interface{}) (sql.Result, error) {
+func (db *SQLServer) RawNonQuery(query string, params []interface{}) (sql.Result, error) {
 	db.params = params
 	return db.executeNonQuery(query)
 }
 
-func (db *MySQL) Table(table string) {
+func (db *SQLServer) Table(table string) {
 	db.table = table
 }
 
-func (db *MySQL) GetParams() []interface{} {
+func (db *SQLServer) GetParams() []interface{} {
 	return db.params
 }
 
-func (db *MySQL) GetParamNames() []string {
+func (db *SQLServer) GetParamNames() []string {
 	return db.paramNames
 }
 
-func (db *MySQL) checkReserved(word string) string {
+func (db *SQLServer) checkReserved(word string) string {
 	reservedWords := []string{
 		"select",
 		"insert",
@@ -157,7 +157,7 @@ func (db *MySQL) checkReserved(word string) string {
 	}
 }
 
-func (db *MySQL) Cols(cols []string) {
+func (db *SQLServer) Cols(cols []string) {
 	escapedCols := []string{}
 	for _, col := range cols {
 		escapedCols = append(escapedCols, db.checkReserved(col))
@@ -165,12 +165,13 @@ func (db *MySQL) Cols(cols []string) {
 	db.cols = escapedCols
 }
 
-func (db *MySQL) Count(col string, alias string) string {
+func (db *SQLServer) Count(col string, alias string) string {
 	return fmt.Sprintf("COUNT(%s) %s", db.checkReserved(col), db.checkReserved(alias))
 }
 
-func (db *MySQL) NewQuery() (DB, error) {
-	newDB := MySQL{}
+func (db *SQLServer) NewQuery() (DB, error) {
+	newDB := SQLServer{}
+	newDB.SetParamPrefix("param")
 	_, err := newDB.Connect(db.databaseName, db.usedConfig)
 	if err != nil {
 		return nil, err
@@ -178,8 +179,8 @@ func (db *MySQL) NewQuery() (DB, error) {
 	return &newDB, nil
 }
 
-func (db *MySQL) Clone() (DB, error) {
-	newDB := MySQL{}
+func (db *SQLServer) Clone() (DB, error) {
+	newDB := SQLServer{}
 	_, err := newDB.Connect(db.databaseName, db.usedConfig)
 	if err != nil {
 		return nil, err
@@ -195,6 +196,7 @@ func (db *MySQL) Clone() (DB, error) {
 	newDB.multiInsertValues = db.multiInsertValues
 	newDB.ordering = db.ordering
 	newDB.params = db.params
+	newDB.paramNames = db.paramNames
 	newDB.query = db.query
 	newDB.parallel = db.parallel
 
@@ -202,42 +204,40 @@ func (db *MySQL) Clone() (DB, error) {
 
 }
 
-func (db *MySQL) openConnection() (*sql.DB, error) {
-	mySQLConfig := mysql.NewConfig()
-	mySQLConfig.User = db.usedConfig.Username
-	mySQLConfig.Passwd = db.usedConfig.Password
-	mySQLConfig.DBName = db.usedConfig.Database
-	mySQLConfig.Addr = fmt.Sprintf("%s:%d", db.usedConfig.Host, db.usedConfig.Port)
-	odb, err := sql.Open("mysql", mySQLConfig.FormatDSN())
-	odb.SetMaxIdleConns(0)
-	odb.SetMaxOpenConns(5000)
+func (db *SQLServer) openConnection() (*sql.DB, error) {
+	connectionString := fmt.Sprintf("server=%s;user id=%s;password=%s;port=%d;database=%s;", db.usedConfig.Host, db.usedConfig.Username, db.usedConfig.Password, db.usedConfig.Port, db.usedConfig.Database)
+
+	odb, err := sql.Open("sqlserver", connectionString)
 	return odb, err
 }
 
-func (db *MySQL) Connect(databaseName string, config Config) (bool, error) {
+func (db *SQLServer) Connect(databaseName string, config Config) (bool, error) {
 	db.databaseName = databaseName
 	db.usedConfig = config
-	if _, exists := mysqlConnections[databaseName]; !exists {
+	if _, exists := sqlServerConnections[databaseName]; !exists {
 
 		dbCon, err := db.openConnection()
 		if err != nil {
 			return false, err
 		}
-		mysqlConnections[databaseName] = dbCon
+		sqlServerConnections[databaseName] = dbCon
 	}
 
 	return true, nil
 }
 
-func (db *MySQL) Insert(values map[string]interface{}, escape bool) {
+func (db *SQLServer) Insert(values map[string]interface{}, escape bool) {
 	var params []interface{}
+	paramNames := []string{}
 	insertColumns := []string{}
 	insertValues := []string{}
 	for key, val := range values {
 		insertColumns = append(insertColumns, db.checkReserved(key))
 		if escape {
 			params = append(params, val)
-			insertValues = append(insertValues, "?")
+			paramName := fmt.Sprintf("insert%d", len(params))
+			insertValues = append(insertValues, fmt.Sprintf("@%s", paramName))
+			paramNames = append(paramNames, paramName)
 		} else {
 			switch v := val.(type) {
 			case string:
@@ -246,12 +246,14 @@ func (db *MySQL) Insert(values map[string]interface{}, escape bool) {
 		}
 	}
 	db.params = params
+	db.paramNames = paramNames
 	db.insertColumns = insertColumns
 	db.insertValues = insertValues
 }
 
-func (db *MySQL) InsertMulti(columns []string, rows [][]interface{}, escape bool) {
+func (db *SQLServer) InsertMulti(columns []string, rows [][]interface{}, escape bool) {
 	var params []interface{}
+	paramNames := []string{}
 	insertColumns := []string{}
 	multiInsertValues := [][]string{}
 	for _, col := range columns {
@@ -262,7 +264,9 @@ func (db *MySQL) InsertMulti(columns []string, rows [][]interface{}, escape bool
 		for _, val := range row {
 			if escape {
 				params = append(params, val)
-				rowInsertValues = append(rowInsertValues, "?")
+				paramName := fmt.Sprintf("insert%d", len(params))
+				rowInsertValues = append(rowInsertValues, fmt.Sprintf("@%s", paramName))
+				paramNames = append(paramNames, paramName)
 			} else {
 				switch v := val.(type) {
 				case string:
@@ -274,17 +278,21 @@ func (db *MySQL) InsertMulti(columns []string, rows [][]interface{}, escape bool
 	}
 	db.insertColumns = insertColumns
 	db.params = params
+	db.paramNames = paramNames
 	db.multiInsertValues = multiInsertValues
 }
 
-func (db *MySQL) Update(values map[string]interface{}, escape bool) {
+func (db *SQLServer) Update(values map[string]interface{}, escape bool) {
 	var params []interface{}
+	paramNames := []string{}
 	updateStrings := []string{}
 
 	for key, val := range values {
 		if escape {
 			params = append(params, val)
-			updateStrings = append(updateStrings, fmt.Sprintf("%s = %s", db.checkReserved(key), "?"))
+			paramName := fmt.Sprintf("insert%d", len(params))
+			paramNames = append(paramNames, paramName)
+			updateStrings = append(updateStrings, fmt.Sprintf("%s = %s", db.checkReserved(key), fmt.Sprintf("@%s", paramName)))
 		} else {
 			switch v := val.(type) {
 			case string:
@@ -293,10 +301,11 @@ func (db *MySQL) Update(values map[string]interface{}, escape bool) {
 		}
 	}
 	db.params = params
+	db.paramNames = paramNames
 	db.updateValues = updateStrings
 }
 
-func (db *MySQL) addTableJoin(joinType string, tableName string, primaryKey string, foreignKey string) {
+func (db *SQLServer) addTableJoin(joinType string, tableName string, primaryKey string, foreignKey string) {
 	q := Query{}
 	q.On(db.checkReserved(primaryKey), "=", db.checkReserved(foreignKey), false)
 	db.joins = append(db.joins, join{
@@ -305,15 +314,15 @@ func (db *MySQL) addTableJoin(joinType string, tableName string, primaryKey stri
 		Query: q})
 }
 
-func (db *MySQL) JoinTable(tableName string, primaryKey string, foreignKey string) {
+func (db *SQLServer) JoinTable(tableName string, primaryKey string, foreignKey string) {
 	db.addTableJoin("JOIN", tableName, primaryKey, foreignKey)
 }
 
-func (db *MySQL) LeftJoinTable(tableName string, primaryKey string, foreignKey string) {
+func (db *SQLServer) LeftJoinTable(tableName string, primaryKey string, foreignKey string) {
 	db.addTableJoin("LEFT JOIN", tableName, primaryKey, foreignKey)
 }
 
-func (db *MySQL) addSubJoin(joinType string, subSql DB, alias string, primaryKey string, foreignKey string) {
+func (db *SQLServer) addSubJoin(joinType string, subSql DB, alias string, primaryKey string, foreignKey string) {
 	q := Query{}
 	q.On(db.checkReserved(primaryKey), "=", db.checkReserved(foreignKey), false)
 	tableName := fmt.Sprintf("(%s) %s", subSql.GenerateSelect(), db.checkReserved(alias))
@@ -325,16 +334,17 @@ func (db *MySQL) addSubJoin(joinType string, subSql DB, alias string, primaryKey
 		Params: params})
 }
 
-func (db *MySQL) JoinSub(subSql DB, alias string, primaryKey string, foreignKey string) {
+func (db *SQLServer) JoinSub(subSql DB, alias string, primaryKey string, foreignKey string) {
 	db.addSubJoin("JOIN", subSql, alias, primaryKey, foreignKey)
 }
 
-func (db *MySQL) LeftJoinSub(subSql DB, alias string, primaryKey string, foreignKey string) {
+func (db *SQLServer) LeftJoinSub(subSql DB, alias string, primaryKey string, foreignKey string) {
 	db.addSubJoin("LEFT JOIN", subSql, alias, primaryKey, foreignKey)
 }
 
-func (db *MySQL) addQueryTableJoin(joinType string, tableName string, queryFunc QueryFunc) {
+func (db *SQLServer) addQueryTableJoin(joinType string, tableName string, queryFunc QueryFunc) {
 	q := Query{}
+	q.SetParamPrefix(db.query.paramPrefix)
 	queryFunc(&q)
 	db.joins = append(db.joins, join{
 		Type:  joinType,
@@ -342,47 +352,50 @@ func (db *MySQL) addQueryTableJoin(joinType string, tableName string, queryFunc 
 		Query: q})
 }
 
-func (db *MySQL) JoinTableQuery(tableName string, queryFunc QueryFunc) {
+func (db *SQLServer) JoinTableQuery(tableName string, queryFunc QueryFunc) {
 	db.addQueryTableJoin("JOIN", tableName, queryFunc)
 }
 
-func (db *MySQL) LeftJoinTableQuery(tableName string, queryFunc QueryFunc) {
+func (db *SQLServer) LeftJoinTableQuery(tableName string, queryFunc QueryFunc) {
 	db.addQueryTableJoin("LEFT JOIN", tableName, queryFunc)
 }
 
-func (db *MySQL) addQuerySubJoin(joinType string, subSql DB, alias string, queryFunc QueryFunc) {
+func (db *SQLServer) addQuerySubJoin(joinType string, subSql DB, alias string, queryFunc QueryFunc) {
 	q := Query{}
 	queryFunc(&q)
 	tableName := fmt.Sprintf("(%s) %s", subSql.GenerateSelect(), db.checkReserved(alias))
 	params := subSql.GetParams()
+	paramNames := subSql.GetParamNames()
 	db.joins = append(db.joins, join{
-		Type:   joinType,
-		Table:  tableName,
-		Query:  q,
-		Params: params})
+		Type:       joinType,
+		Table:      tableName,
+		Query:      q,
+		Params:     params,
+		ParamNames: paramNames,
+	})
 }
 
-func (db *MySQL) JoinSubQuery(subSql DB, alias string, queryFunc QueryFunc) {
+func (db *SQLServer) JoinSubQuery(subSql DB, alias string, queryFunc QueryFunc) {
 	db.addQuerySubJoin("JOIN", subSql, alias, queryFunc)
 }
 
-func (db *MySQL) LeftJoinSubQuery(subSql DB, alias string, queryFunc QueryFunc) {
+func (db *SQLServer) LeftJoinSubQuery(subSql DB, alias string, queryFunc QueryFunc) {
 	db.addQuerySubJoin("LEFT JOIN", subSql, alias, queryFunc)
 }
 
-func (db *MySQL) Where(field string, comparator string, value interface{}, escape bool) {
+func (db *SQLServer) Where(field string, comparator string, value interface{}, escape bool) {
 	db.query.Where(db.checkReserved(field), comparator, value, escape)
 }
 
-func (db *MySQL) WhereNull(field string) {
+func (db *SQLServer) WhereNull(field string) {
 	db.query.WhereNull(db.checkReserved(field))
 }
 
-func (db *MySQL) WhereNotNull(field string) {
+func (db *SQLServer) WhereNotNull(field string) {
 	db.query.WhereNotNull(db.checkReserved(field))
 }
 
-func (db *MySQL) addWhereInList(inType string, field string, values []interface{}, escape bool) {
+func (db *SQLServer) addWhereInList(inType string, field string, values []interface{}, escape bool) {
 	if inType == "in" {
 		db.query.WhereInList(db.checkReserved(field), values, escape)
 	} else {
@@ -390,46 +403,46 @@ func (db *MySQL) addWhereInList(inType string, field string, values []interface{
 	}
 }
 
-func (db *MySQL) WhereInList(field string, values []interface{}, escape bool) {
+func (db *SQLServer) WhereInList(field string, values []interface{}, escape bool) {
 	db.addWhereInList("in", db.checkReserved(field), values, escape)
 }
 
-func (db *MySQL) WhereNotInList(field string, values []interface{}, escape bool) {
+func (db *SQLServer) WhereNotInList(field string, values []interface{}, escape bool) {
 	db.addWhereInList("not in", db.checkReserved(field), values, escape)
 }
 
-func (db *MySQL) WhereInSub(field string, subSql DB) {
+func (db *SQLServer) WhereInSub(field string, subSql DB) {
 	db.query.WhereInSub(db.checkReserved(field), subSql)
 }
 
-func (db *MySQL) WhereNotInSub(field string, subSql DB) {
+func (db *SQLServer) WhereNotInSub(field string, subSql DB) {
 	db.query.WhereNotInSub(db.checkReserved(field), subSql)
 }
 
-func (db *MySQL) Or() {
+func (db *SQLServer) Or() {
 	db.query.Or()
 }
-func (db *MySQL) And() {
+func (db *SQLServer) And() {
 	db.query.And()
 }
 
-func (db *MySQL) OpenBracket() {
+func (db *SQLServer) OpenBracket() {
 	db.query.OpenBracket()
 }
 
-func (db *MySQL) CloseBracket() {
+func (db *SQLServer) CloseBracket() {
 	db.query.CloseBracket()
 }
 
-func (db *MySQL) LimitBy(number int) {
+func (db *SQLServer) LimitBy(number int) {
 	db.limitBy = number
 }
 
-func (db *MySQL) OffsetBy(number int) {
+func (db *SQLServer) OffsetBy(number int) {
 	db.offsetBy = number
 }
 
-func (db *MySQL) OrderBy(field string, direction string) {
+func (db *SQLServer) OrderBy(field string, direction string) {
 	direction = strings.ToUpper(direction)
 	if direction == "ASC" || direction == "DESC" {
 		db.ordering = append(db.ordering, orderBy{
@@ -440,15 +453,16 @@ func (db *MySQL) OrderBy(field string, direction string) {
 
 }
 
-func (db *MySQL) GroupBy(field ...string) {
+func (db *SQLServer) GroupBy(field ...string) {
 	for _, f := range field {
 		db.groupColumns = append(db.groupColumns, db.checkReserved(f))
 	}
 
 }
 
-func (db *MySQL) GenerateSelect() string {
+func (db *SQLServer) GenerateSelect() string {
 	var params []interface{}
+	paramNames := []string{}
 	query := "SELECT "
 	query += strings.Join(db.cols, ",")
 	query += " FROM "
@@ -456,15 +470,18 @@ func (db *MySQL) GenerateSelect() string {
 
 	for _, j := range db.joins {
 		params = append(params, j.Params...)
+		paramNames = append(paramNames, j.ParamNames...)
 		query += fmt.Sprintf(" %s %s ON ", j.Type, j.Table)
-		whereString, jParams, _ := j.Query.ApplyWheres()
+		whereString, jParams, jParamNames := j.Query.ApplyWheres()
 		query += fmt.Sprintf(" %s ", whereString)
 		params = append(params, jParams...)
+		paramNames = append(paramNames, jParamNames...)
 	}
 
 	if len(db.query.wheres) > 0 {
-		whereString, newParams, _ := db.query.ApplyWheres()
+		whereString, newParams, newParamNames := db.query.ApplyWheres()
 		params = append(params, newParams...)
+		paramNames = append(paramNames, newParamNames...)
 		query += " WHERE " + whereString
 	}
 
@@ -480,18 +497,19 @@ func (db *MySQL) GenerateSelect() string {
 			orderStrings = append(orderStrings, fmt.Sprintf("%s %s", o.Field, o.Direction))
 		}
 		query += strings.Join(orderStrings, ", ")
+
+		if db.limitBy > 0 {
+			query += fmt.Sprintf(" OFFSET %d ROWS ", db.offsetBy)
+			query += fmt.Sprintf(" FETCH NEXT %d ROWS ONLY ", db.limitBy)
+		}
+
 	}
 
-	if db.limitBy > 0 {
-		query += fmt.Sprintf(" LIMIT %d ", db.limitBy)
-		if db.offsetBy > 0 {
-			query += fmt.Sprintf(" OFFSET %d ", db.offsetBy)
-		}
-	}
 	db.params = params
+	db.paramNames = paramNames
 	return query
 }
-func (db *MySQL) GenerateInsert() string {
+func (db *SQLServer) GenerateInsert() string {
 	query := fmt.Sprintf("INSERT INTO %s ", db.table)
 	query += fmt.Sprintf(" (%s) VALUES ", strings.Join(db.insertColumns, ","))
 	if len(db.insertValues) > 0 {
@@ -503,44 +521,82 @@ func (db *MySQL) GenerateInsert() string {
 		}
 		query += strings.Join(insertRows, ",")
 	}
+	query += "; select isNull(SCOPE_IDENTITY(), -1);"
 	return query
 }
-func (db *MySQL) GenerateUpdate() string {
+func (db *SQLServer) GenerateUpdate() string {
 	query := fmt.Sprintf("UPDATE %s SET ", db.table)
 	query += strings.Join(db.updateValues, ",")
 	if len(db.query.wheres) > 0 {
-		whereStr, newParams, _ := db.query.ApplyWheres()
+		whereStr, newParams, newParamNames := db.query.ApplyWheres()
 		query += fmt.Sprintf(" WHERE %s ", whereStr)
 		db.params = append(db.params, newParams...)
+		db.paramNames = append(db.paramNames, newParamNames...)
 	}
 	return query
 }
 
-func (db *MySQL) GenerateDelete() string {
+func (db *SQLServer) GenerateDelete() string {
 	query := fmt.Sprintf("DELETE FROM %s ", db.table)
 	if len(db.query.wheres) > 0 {
-		whereStr, newParams, _ := db.query.ApplyWheres()
+		whereStr, newParams, newParamNames := db.query.ApplyWheres()
 		query += fmt.Sprintf(" WHERE %s ", whereStr)
 		db.params = append(db.params, newParams...)
+		db.paramNames = append(db.paramNames, newParamNames...)
 	}
 	return query
 }
 
-func (db *MySQL) Save() (sql.Result, error) {
+//result response doesn't include last insert id in SQL Server so creating a custom implementation
+type sqlServerResult struct {
+	rowsAffected int64
+	lastInsertId int64
+	err          error
+}
+
+func (result *sqlServerResult) RowsAffected() (int64, error) {
+	return result.rowsAffected, result.err
+}
+func (result *sqlServerResult) LastInsertId() (int64, error) {
+	return result.lastInsertId, result.err
+}
+
+func (db *SQLServer) Save() (sql.Result, error) {
 	var query string
+	sqlResult := sqlServerResult{}
 	if len(db.insertValues) > 0 || len(db.multiInsertValues) > 0 {
 		query = db.GenerateInsert()
+		fetchRes, close, err := db.executeQuery(query)
+		if err != nil {
+			sqlResult.err = err
+			return &sqlResult, err
+		}
+		defer close()
+		var lastId int64
+		for fetchRes.Next() {
+			fetchRes.Scan(&lastId)
+		}
+
+		var affectedRows int64
+		affectedRows = 1
+		if len(db.multiInsertValues) > 0 {
+			affectedRows = int64(len(db.multiInsertValues))
+		}
+		lastId -= (affectedRows - 1)
+		sqlResult.lastInsertId = lastId
+		sqlResult.rowsAffected = affectedRows
 	} else if len(db.updateValues) > 0 {
 		query = db.GenerateUpdate()
+		return db.executeNonQuery(query)
 	}
-	return db.executeNonQuery(query)
+	return &sqlResult, nil
 }
-func (db *MySQL) Fetch() (*sql.Rows, context.CancelFunc, error) {
+func (db *SQLServer) Fetch() (*sql.Rows, context.CancelFunc, error) {
 
 	return db.executeQuery(db.GenerateSelect())
 }
 
-func (db *MySQL) FetchConcurrent() (successChannel chan bool, startRowsChannel chan bool, rowChannel chan *sql.Rows, nextChannel chan bool, completeChannel chan bool, cancelChannel chan bool, errorChannel chan error) {
+func (db *SQLServer) FetchConcurrent() (successChannel chan bool, startRowsChannel chan bool, rowChannel chan *sql.Rows, nextChannel chan bool, completeChannel chan bool, cancelChannel chan bool, errorChannel chan error) {
 	successChannel = make(chan bool)
 	startRowsChannel = make(chan bool)
 	rowChannel = make(chan *sql.Rows)
@@ -552,14 +608,14 @@ func (db *MySQL) FetchConcurrent() (successChannel chan bool, startRowsChannel c
 	return successChannel, startRowsChannel, rowChannel, nextChannel, completeChannel, cancelChannel, errorChannel
 }
 
-func (db *MySQL) Delete() (sql.Result, error) {
+func (db *SQLServer) Delete() (sql.Result, error) {
 	return db.executeNonQuery(db.GenerateDelete())
 }
 
-func (db *MySQL) concExecuteQuery(query string, successChannel chan bool, startRowsChannel chan bool, rowChan chan *sql.Rows, nextChan chan bool, completeChan chan bool, cancelChan chan bool, errorChan chan error) {
+func (db *SQLServer) concExecuteQuery(query string, successChannel chan bool, startRowsChannel chan bool, rowChan chan *sql.Rows, nextChan chan bool, completeChan chan bool, cancelChan chan bool, errorChan chan error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelFunc()
-	con := mysqlConnections[db.databaseName]
+	con := sqlServerConnections[db.databaseName]
 
 	if db.parallel {
 		newCon, err := db.openConnection()
@@ -571,7 +627,13 @@ func (db *MySQL) concExecuteQuery(query string, successChannel chan bool, startR
 		con = newCon
 		defer con.Close()
 	}
-	results, err := con.QueryContext(ctx, query, db.params...)
+
+	var namedParameters []interface{}
+	for i, param := range db.params {
+		namedParameters = append(namedParameters, sql.Named(db.paramNames[i], param))
+	}
+
+	results, err := con.QueryContext(ctx, query, namedParameters...)
 
 	if err != nil {
 		fmt.Println(err)
@@ -601,9 +663,9 @@ func (db *MySQL) concExecuteQuery(query string, successChannel chan bool, startR
 	completeChan <- true
 }
 
-func (db *MySQL) executeQuery(query string) (*sql.Rows, context.CancelFunc, error) {
+func (db *SQLServer) executeQuery(query string) (*sql.Rows, context.CancelFunc, error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
-	con := mysqlConnections[db.databaseName]
+	con := sqlServerConnections[db.databaseName]
 
 	if db.parallel {
 		newCon, err := db.openConnection()
@@ -615,7 +677,13 @@ func (db *MySQL) executeQuery(query string) (*sql.Rows, context.CancelFunc, erro
 		con = newCon
 		defer con.Close()
 	}
-	results, err := con.QueryContext(ctx, query, db.params...)
+
+	var namedParameters []interface{}
+	for i, param := range db.params {
+		namedParameters = append(namedParameters, sql.Named(db.paramNames[i], param))
+	}
+
+	results, err := con.QueryContext(ctx, query, namedParameters...)
 
 	if err != nil {
 		fmt.Println(err)
@@ -625,10 +693,10 @@ func (db *MySQL) executeQuery(query string) (*sql.Rows, context.CancelFunc, erro
 	return results, cancelFunc, nil
 }
 
-func (db *MySQL) executeNonQuery(query string) (sql.Result, error) {
+func (db *SQLServer) executeNonQuery(query string) (sql.Result, error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelFunc()
-	con := mysqlConnections[db.databaseName]
+	con := sqlServerConnections[db.databaseName]
 
 	if db.parallel {
 		newCon, err := db.openConnection()
@@ -640,7 +708,12 @@ func (db *MySQL) executeNonQuery(query string) (sql.Result, error) {
 		defer con.Close()
 	}
 
-	results, err := con.ExecContext(ctx, query, db.params...)
+	var namedParameters []interface{}
+	for i, param := range db.params {
+		namedParameters = append(namedParameters, sql.Named(db.paramNames[i], param))
+	}
+
+	results, err := con.ExecContext(ctx, query, namedParameters...)
 
 	if err != nil {
 		fmt.Println(err)

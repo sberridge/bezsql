@@ -9,6 +9,7 @@ type DB interface {
 	Connect(databaseName string, config Config) (bool, error)
 	DoesTableExist(table string) (bool, error)
 	DoesColumnExist(table string, field string) (bool, error)
+	SetParamPrefix(prefix string)
 	RunParallel()
 	GetConfig() Config
 	NewQuery() (DB, error)
@@ -22,6 +23,7 @@ type DB interface {
 	Cols(cols []string)
 	Count(col string, alias string) string
 	GetParams() []interface{}
+	GetParamNames() []string
 	GenerateSelect() string
 	GenerateInsert() string
 	GenerateUpdate() string
