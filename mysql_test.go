@@ -852,6 +852,47 @@ func TestGrouping(t *testing.T) {
 }
 
 func TestConcurrentFetch(t *testing.T) {
+	db, _ := Open("test")
+	db.Table("users")
+	db.Cols([]string{
+		"id",
+		"first_name",
+	})
+	successChannel, startRowsChannel, rowChannel, nextChannel, completeChannel, _, errorChannel := db.FetchConcurrent()
+	select {
+	case err := <-errorChannel:
+		t.Fatalf("Concurrent fetch errored with %s", err.Error())
+	case <-successChannel:
+		startRowsChannel <- true
+		numRows := 0
+		complete := false
+		for {
+			select {
+			case <-rowChannel:
+				numRows++
+				nextChannel <- true
+			case <-completeChannel:
+				complete = true
+			}
+			if complete {
+				break
+			}
+		}
+		if numRows == 0 {
+			t.Fatalf("No rows returned")
+		}
+	}
+}
+
+func joinErrors(errors []error) string {
+	errorStrings := []string{}
+	for _, err := range errors {
+		errorStrings = append(errorStrings, err.Error())
+	}
+	return strings.Join(errorStrings, ", ")
+}
+
+func TestConcurrentMultiFetch(t *testing.T) {
 	db1, _ := Open("test")
 	db1.Table("users")
 	db1.Cols([]string{
@@ -874,52 +915,105 @@ func TestConcurrentFetch(t *testing.T) {
 		"gender",
 	})
 
-	results := ConcurrentFetch(db1, db2, db3)
-	if len(results) != 3 {
-		t.Fatalf("Expected 3 sets of results, got %d", len(results))
+	db4, _ := db1.NewQuery()
+	db4.Table("countries")
+	db4.Cols([]string{
+		"id",
+		"country",
+	})
+
+	results := ConcurrentFetch(db1, db2, db3, db4)
+	if len(results) != 4 {
+		t.Fatalf("Expected 4 sets of results, got %d", len(results))
 	}
 	for i, res := range results {
-		defer res.CloseFunc()
 		if i == 0 {
 			numRows := 0
-			for res.Results.Next() {
-				numRows++
-				var (
-					id         int32
-					first_name string
-					surname    string
-				)
-				res.Results.Scan(&id, &first_name, &surname)
+			if len(res.Errors) > 0 {
+				t.Fatalf("First query errored %s", joinErrors(res.Errors))
+			}
+			complete := false
+			res.StartRowsChannel <- true
+			for {
+				select {
+				case row := <-res.RowChannel:
+					numRows++
+					var (
+						id         int32
+						first_name string
+						surname    string
+					)
+					row.Scan(&id, &first_name, &surname)
+					res.NextChannel <- true
+				case <-res.CompleteChannel:
+					complete = true
+				}
+				if complete {
+					break
+				}
 			}
 			if numRows == 0 {
 				t.Fatal("No results returned in first concurrent query")
 			}
 		} else if i == 1 {
 			numRows := 0
-			for res.Results.Next() {
-				numRows++
-				var (
-					id   int32
-					city string
-				)
-				res.Results.Scan(&id, &city)
+			if len(res.Errors) > 0 {
+				t.Fatalf("Second query errored %s", joinErrors(res.Errors))
+			}
+			complete := false
+			res.StartRowsChannel <- true
+			for {
+				select {
+				case row := <-res.RowChannel:
+					numRows++
+					var (
+						id   int32
+						city string
+					)
+					row.Scan(&id, &city)
+					res.NextChannel <- true
+				case <-res.CompleteChannel:
+					complete = true
+				}
+				if complete {
+					break
+				}
 			}
 			if numRows == 0 {
 				t.Fatal("No results returned in second concurrent query")
 			}
 		} else if i == 2 {
 			numRows := 0
-			for res.Results.Next() {
-				numRows++
-				var (
-					id     int32
-					gender string
-				)
-				res.Results.Scan(&id, &gender)
+			if len(res.Errors) > 0 {
+				t.Fatalf("Third query errored %s", joinErrors(res.Errors))
+			}
+			complete := false
+			res.StartRowsChannel <- true
+			for {
+				select {
+				case row := <-res.RowChannel:
+					numRows++
+					var (
+						id     int32
+						gender string
+					)
+					row.Scan(&id, &gender)
+					res.NextChannel <- true
+				case <-res.CompleteChannel:
+					complete = true
+				}
+				if complete {
+					break
+				}
 			}
 			if numRows == 0 {
 				t.Fatal("No results returned in third concurrent query")
 			}
+		} else if i == 3 {
+			if len(res.Errors) > 0 {
+				t.Fatalf("Third query errored %s", joinErrors(res.Errors))
+			}
+			res.CancelChannel <- true
 		}
 	}
 }
@@ -940,7 +1034,32 @@ func runConcurrent() {
 
 	res := ConcurrentFetch(queries...)
 	for _, r := range res {
-		defer r.CloseFunc()
+		if len(r.Errors) == 0 {
+			//fmt.Println("test!!")
+			r.StartRowsChannel <- true
+			done := false
+			for {
+				select {
+				case row := <-r.RowChannel:
+					var (
+						id         int
+						first_name string
+						surname    string
+					)
+					row.Scan(&id, &first_name, &surname)
+					r.NextChannel <- true
+				case <-r.CompleteChannel:
+					done = true
+				}
+				if done {
+					break
+				}
+			}
+			//r.CancelChannel <- true
+		} else {
+			fmt.Println(r.Errors)
+			fmt.Println("oh no")
+		}
 	}
 }
 

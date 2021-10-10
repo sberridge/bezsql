@@ -34,9 +34,9 @@ db, err := bezsql.Open("test")
 
 The argument passed into this function determines which database is returned as specified by the connections that are set up.
 
-### Run a Basic Query
+### Run a Basic Select Query
 
-A basic query involves choosing which table to select from and which fields to select.
+A basic select query involves choosing which table to select from and which fields to select.
 
 The Fetch method is then used to execute the query and return the results.
 
@@ -67,6 +67,120 @@ for res.Next() {
     fmt.Println(id, username)
 }
 ```
+
+#### Fetch Concurrently
+
+```go
+db.Table("users")
+db.Cols([]string{
+    "id",
+    "username",
+})
+
+successChannel, startRowsChannel, rowChannel, nextChannel, completeChannel, cancelChannel, errorChannel := db.FetchConcurrent()
+select {
+case err := <-errorChannel:
+    //error handling
+case <-successChannel:
+    //query successful and can start recieving rows
+
+    //start receiving
+    startRowsChannel <- true
+
+    //alternatively send on cancelChannel to cancel the query without looping through the results
+    // cancelChannel <- true
+
+    complete := false
+    for {
+        select {
+        case row := <-rowChannel:
+            //receives *sql.Rows on each iteration of Next
+
+            var (
+                id int
+                username string
+            )
+            row.Scan(&id, &username)
+
+            //request next row
+            nextChannel <- true
+        case <-completeChannel:
+            //receives after all rows have returned
+            //all rows received so exit loop
+            complete = true
+        }
+        if complete {
+            break
+        }
+    }
+}
+```
+
+#### Fetch Multiple Queries Concurrently
+
+A WIP function is available to allow multiple query results to be fetched concurrently.
+
+```go
+userDb, _ := bezsql.Open("test")
+userDb.Table("users")
+userDb.Cols([]string{
+    "id",
+    "username",
+})
+userDb.Where("date_created", ">", "2021-10-01", true)
+
+//create new query on the same database
+cityDb, _ := userDb.NewQuery()
+cityDb.Table("cities")
+cityDb.Cols([]string{
+    "id",
+    "city",
+})
+
+//returns map of int to result where int is the index of the original query
+results := bezsql.ConcurrentFetch(userDb, cityDb)
+
+userResults := results[0]
+cityResults := results[1]
+
+
+if len(userResults.Errors) > 0 {
+    //error handling
+}
+completedQuery := false
+//begin recieving rows
+userResults.StartRowsChannel <- true
+for {
+    select {
+    case row := <- userResults.RowChannel:
+        //receives *sql.Rows on each iteration of Next
+        var (
+            id int
+            username string
+        )
+        row.Scan(&id, &username)
+
+        //request next row
+        userResults.NextChannel <- true
+    case <- userResults.CompleteChannel:
+        //receives after final iteration of Next
+        //all rows recieved so exit the loop
+        completedQuery = true
+    }
+
+    if completedQuery {
+        break
+    }
+}
+
+if len(cityResults.Errors) > 0 {
+    //error handling
+}
+
+//cancel the query
+cityResults.CancelChannel <- true
+```
+
 
 ### Adding Conditions
 
@@ -205,53 +319,7 @@ db.LeftJoinSubQuery(subDb, "post_count", func(q *bezsql.Query) {
 })
 ```
 
-### Concurrent Fetching
 
-A WIP function is available to allow query results to be fetched concurrently.
-
-```go
-userDb, _ := bezsql.Open("test")
-userDb.Table("users")
-userDb.Cols([]string{
-    "id",
-    "username",
-})
-userDb.Where("date_created", ">", "2021-10-01", true)
-
-//create new query on the same database
-cityDb, _ := userDb.NewQuery()
-cityDb.Table("cities")
-cityDb.Cols([]string{
-    "id",
-    "city",
-})
-
-//returns map of int to result where int is the index of the original query
-results := bezsql.ConcurrentFetch(userDb, cityDb)
-
-userResults := results[0]
-cityResults := results[1]
-
-defer userResults.CloseFunc()
-defer cityResults.CloseFunc()
-
-for userResults.Results.Next() {
-    var (
-        id int32
-        username string
-    )
-    userResults.Results.Scan(&id, &username)
-}
-
-for cityResults.Results.Next() {
-    var (
-        id int32
-        city string
-    )
-    cityResults.Results.Scan(&id, &city)
-}
-
-```
 
 ### Inserting Records
 
