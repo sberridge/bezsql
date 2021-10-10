@@ -1021,7 +1021,7 @@ func TestConcurrentMultiFetch(t *testing.T) {
 func runConcurrent() {
 
 	queries := []DB{}
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 20; i++ {
 		db, _ := Open("test")
 		db.Table("users")
 		db.Cols([]string{
@@ -1047,7 +1047,6 @@ func runConcurrent() {
 						surname    string
 					)
 					row.Scan(&id, &first_name, &surname)
-					fmt.Println(id, first_name, surname)
 					r.NextChannel <- true
 				case <-r.CompleteChannel:
 					done = true

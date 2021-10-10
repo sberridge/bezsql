@@ -631,7 +631,6 @@ func (db *MySQL) executeNonQuery(query string) (sql.Result, error) {
 
 	if err != nil {
 		fmt.Println(err)
-		defer cancelFunc()
 		return nil, err
 	}
 	return results, nil
