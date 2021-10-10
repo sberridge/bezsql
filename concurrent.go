@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type ConcurrentFetchResult struct {
+type concurrentFetchResult struct {
 	Errors           []error
 	StartRowsChannel chan bool
 	RowChannel       chan *sql.Rows
@@ -24,21 +24,13 @@ type concurrentFetchChannelResponse struct {
 	CancelChannel    chan bool
 }
 
-type concurrentFetchQueryChannelResponse struct {
-	StartRowsChannel chan bool
-	RowChannel       chan *sql.Rows
-	NextChannel      chan bool
-	CompleteChannel  chan bool
-	CancelChannel    chan bool
-}
-
-func executeReplica(db DB, responseChannel chan concurrentFetchQueryChannelResponse, errorChannel chan error) {
+func executeReplica(db DB, responseChannel chan concurrentFetchChannelResponse, errorChannel chan error) {
 	successChannel, startRowsChannel, rowChannel, nextChannel, completeChannel, cancelChannel, queryErrorChannel := db.FetchConcurrent()
 	select {
 	case err := <-queryErrorChannel:
 		errorChannel <- err
 	case <-successChannel:
-		responseChannel <- concurrentFetchQueryChannelResponse{
+		responseChannel <- concurrentFetchChannelResponse{
 			StartRowsChannel: startRowsChannel,
 			RowChannel:       rowChannel,
 			NextChannel:      nextChannel,
@@ -49,8 +41,8 @@ func executeReplica(db DB, responseChannel chan concurrentFetchQueryChannelRespo
 	}
 }
 
-func runReplicas(dbs []DB) (*concurrentFetchQueryChannelResponse, []error) {
-	successChannel := make(chan concurrentFetchQueryChannelResponse)
+func runReplicas(dbs []DB) (*concurrentFetchChannelResponse, []error) {
+	successChannel := make(chan concurrentFetchChannelResponse)
 	errorChannel := make(chan error)
 
 	for _, db := range dbs {
@@ -104,8 +96,8 @@ func replicateQuery(index int, query DB, resultChan chan concurrentFetchChannelR
 	}
 }
 
-func ConcurrentFetch(queries ...DB) (results map[int]ConcurrentFetchResult) {
-	results = make(map[int]ConcurrentFetchResult)
+func ConcurrentFetch(queries ...DB) (results map[int]concurrentFetchResult) {
+	results = make(map[int]concurrentFetchResult)
 	c := make(chan concurrentFetchChannelResponse)
 
 	for i, query := range queries {
@@ -115,7 +107,7 @@ func ConcurrentFetch(queries ...DB) (results map[int]ConcurrentFetchResult) {
 	for i := 0; i < len(queries); i++ {
 		select {
 		case fr := <-c:
-			conRes := ConcurrentFetchResult{
+			conRes := concurrentFetchResult{
 				Errors:           fr.Errors,
 				StartRowsChannel: fr.StartRowsChannel,
 				RowChannel:       fr.RowChannel,

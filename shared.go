@@ -2,7 +2,7 @@ package bezsql
 
 import "strings"
 
-type QueryFunc func(*Query)
+type queryFunc func(*Query)
 
 type join struct {
 	Type       string

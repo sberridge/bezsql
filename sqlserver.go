@@ -12,7 +12,7 @@ import (
 
 var sqlServerConnections map[string]*sql.DB = make(map[string]*sql.DB)
 
-type SQLServer struct {
+type sQLServer struct {
 	databaseName      string
 	usedConfig        Config
 	table             string
@@ -32,11 +32,11 @@ type SQLServer struct {
 	parallel          bool
 }
 
-func (db *SQLServer) SetParamPrefix(prefix string) {
+func (db *sQLServer) SetParamPrefix(prefix string) {
 	db.query.SetParamPrefix(prefix)
 }
 
-func (db *SQLServer) DoesTableExist(table string) (bool, error) {
+func (db *sQLServer) DoesTableExist(table string) (bool, error) {
 	newDb, err := db.NewQuery()
 	if err != nil {
 		return false, err
@@ -63,11 +63,11 @@ func (db *SQLServer) DoesTableExist(table string) (bool, error) {
 	return false, nil
 }
 
-func (db *SQLServer) RunParallel() {
+func (db *sQLServer) RunParallel() {
 	db.parallel = true
 }
 
-func (db *SQLServer) DoesColumnExist(table string, field string) (bool, error) {
+func (db *sQLServer) DoesColumnExist(table string, field string) (bool, error) {
 	newDb, err := db.NewQuery()
 	if err != nil {
 		return false, err
@@ -95,33 +95,33 @@ func (db *SQLServer) DoesColumnExist(table string, field string) (bool, error) {
 	return false, nil
 }
 
-func (db *SQLServer) GetConfig() Config {
+func (db *sQLServer) GetConfig() Config {
 	return db.usedConfig
 }
 
-func (db *SQLServer) RawQuery(query string, params []interface{}) (*sql.Rows, context.CancelFunc, error) {
+func (db *sQLServer) RawQuery(query string, params []interface{}) (*sql.Rows, context.CancelFunc, error) {
 	db.params = params
 	return db.executeQuery(query)
 }
 
-func (db *SQLServer) RawNonQuery(query string, params []interface{}) (sql.Result, error) {
+func (db *sQLServer) RawNonQuery(query string, params []interface{}) (sql.Result, error) {
 	db.params = params
 	return db.executeNonQuery(query)
 }
 
-func (db *SQLServer) Table(table string) {
+func (db *sQLServer) Table(table string) {
 	db.table = table
 }
 
-func (db *SQLServer) GetParams() []interface{} {
+func (db *sQLServer) GetParams() []interface{} {
 	return db.params
 }
 
-func (db *SQLServer) GetParamNames() []string {
+func (db *sQLServer) GetParamNames() []string {
 	return db.paramNames
 }
 
-func (db *SQLServer) checkReserved(word string) string {
+func (db *sQLServer) checkReserved(word string) string {
 	reservedWords := []string{
 		"select",
 		"insert",
@@ -157,7 +157,7 @@ func (db *SQLServer) checkReserved(word string) string {
 	}
 }
 
-func (db *SQLServer) Cols(cols []string) {
+func (db *sQLServer) Cols(cols []string) {
 	escapedCols := []string{}
 	for _, col := range cols {
 		escapedCols = append(escapedCols, db.checkReserved(col))
@@ -165,12 +165,12 @@ func (db *SQLServer) Cols(cols []string) {
 	db.cols = escapedCols
 }
 
-func (db *SQLServer) Count(col string, alias string) string {
+func (db *sQLServer) Count(col string, alias string) string {
 	return fmt.Sprintf("COUNT(%s) %s", db.checkReserved(col), db.checkReserved(alias))
 }
 
-func (db *SQLServer) NewQuery() (DB, error) {
-	newDB := SQLServer{}
+func (db *sQLServer) NewQuery() (DB, error) {
+	newDB := sQLServer{}
 	newDB.SetParamPrefix("param")
 	_, err := newDB.Connect(db.databaseName, db.usedConfig)
 	if err != nil {
@@ -179,8 +179,8 @@ func (db *SQLServer) NewQuery() (DB, error) {
 	return &newDB, nil
 }
 
-func (db *SQLServer) Clone() (DB, error) {
-	newDB := SQLServer{}
+func (db *sQLServer) Clone() (DB, error) {
+	newDB := sQLServer{}
 	_, err := newDB.Connect(db.databaseName, db.usedConfig)
 	if err != nil {
 		return nil, err
@@ -204,14 +204,14 @@ func (db *SQLServer) Clone() (DB, error) {
 
 }
 
-func (db *SQLServer) openConnection() (*sql.DB, error) {
+func (db *sQLServer) openConnection() (*sql.DB, error) {
 	connectionString := fmt.Sprintf("server=%s;user id=%s;password=%s;port=%d;database=%s;", db.usedConfig.Host, db.usedConfig.Username, db.usedConfig.Password, db.usedConfig.Port, db.usedConfig.Database)
 
 	odb, err := sql.Open("sqlserver", connectionString)
 	return odb, err
 }
 
-func (db *SQLServer) Connect(databaseName string, config Config) (bool, error) {
+func (db *sQLServer) Connect(databaseName string, config Config) (bool, error) {
 	db.databaseName = databaseName
 	db.usedConfig = config
 	if _, exists := sqlServerConnections[databaseName]; !exists {
@@ -226,7 +226,7 @@ func (db *SQLServer) Connect(databaseName string, config Config) (bool, error) {
 	return true, nil
 }
 
-func (db *SQLServer) Insert(values map[string]interface{}, escape bool) {
+func (db *sQLServer) Insert(values map[string]interface{}, escape bool) {
 	var params []interface{}
 	paramNames := []string{}
 	insertColumns := []string{}
@@ -251,7 +251,7 @@ func (db *SQLServer) Insert(values map[string]interface{}, escape bool) {
 	db.insertValues = insertValues
 }
 
-func (db *SQLServer) InsertMulti(columns []string, rows [][]interface{}, escape bool) {
+func (db *sQLServer) InsertMulti(columns []string, rows [][]interface{}, escape bool) {
 	var params []interface{}
 	paramNames := []string{}
 	insertColumns := []string{}
@@ -282,7 +282,7 @@ func (db *SQLServer) InsertMulti(columns []string, rows [][]interface{}, escape 
 	db.multiInsertValues = multiInsertValues
 }
 
-func (db *SQLServer) Update(values map[string]interface{}, escape bool) {
+func (db *sQLServer) Update(values map[string]interface{}, escape bool) {
 	var params []interface{}
 	paramNames := []string{}
 	updateStrings := []string{}
@@ -305,7 +305,7 @@ func (db *SQLServer) Update(values map[string]interface{}, escape bool) {
 	db.updateValues = updateStrings
 }
 
-func (db *SQLServer) addTableJoin(joinType string, tableName string, primaryKey string, foreignKey string) {
+func (db *sQLServer) addTableJoin(joinType string, tableName string, primaryKey string, foreignKey string) {
 	q := Query{}
 	q.On(db.checkReserved(primaryKey), "=", db.checkReserved(foreignKey), false)
 	db.joins = append(db.joins, join{
@@ -314,15 +314,15 @@ func (db *SQLServer) addTableJoin(joinType string, tableName string, primaryKey 
 		Query: q})
 }
 
-func (db *SQLServer) JoinTable(tableName string, primaryKey string, foreignKey string) {
+func (db *sQLServer) JoinTable(tableName string, primaryKey string, foreignKey string) {
 	db.addTableJoin("JOIN", tableName, primaryKey, foreignKey)
 }
 
-func (db *SQLServer) LeftJoinTable(tableName string, primaryKey string, foreignKey string) {
+func (db *sQLServer) LeftJoinTable(tableName string, primaryKey string, foreignKey string) {
 	db.addTableJoin("LEFT JOIN", tableName, primaryKey, foreignKey)
 }
 
-func (db *SQLServer) addSubJoin(joinType string, subSql DB, alias string, primaryKey string, foreignKey string) {
+func (db *sQLServer) addSubJoin(joinType string, subSql DB, alias string, primaryKey string, foreignKey string) {
 	q := Query{}
 	q.On(db.checkReserved(primaryKey), "=", db.checkReserved(foreignKey), false)
 	tableName := fmt.Sprintf("(%s) %s", subSql.GenerateSelect(), db.checkReserved(alias))
@@ -334,15 +334,15 @@ func (db *SQLServer) addSubJoin(joinType string, subSql DB, alias string, primar
 		Params: params})
 }
 
-func (db *SQLServer) JoinSub(subSql DB, alias string, primaryKey string, foreignKey string) {
+func (db *sQLServer) JoinSub(subSql DB, alias string, primaryKey string, foreignKey string) {
 	db.addSubJoin("JOIN", subSql, alias, primaryKey, foreignKey)
 }
 
-func (db *SQLServer) LeftJoinSub(subSql DB, alias string, primaryKey string, foreignKey string) {
+func (db *sQLServer) LeftJoinSub(subSql DB, alias string, primaryKey string, foreignKey string) {
 	db.addSubJoin("LEFT JOIN", subSql, alias, primaryKey, foreignKey)
 }
 
-func (db *SQLServer) addQueryTableJoin(joinType string, tableName string, queryFunc QueryFunc) {
+func (db *sQLServer) addQueryTableJoin(joinType string, tableName string, queryFunc queryFunc) {
 	q := Query{}
 	q.SetParamPrefix(db.query.paramPrefix)
 	queryFunc(&q)
@@ -352,15 +352,15 @@ func (db *SQLServer) addQueryTableJoin(joinType string, tableName string, queryF
 		Query: q})
 }
 
-func (db *SQLServer) JoinTableQuery(tableName string, queryFunc QueryFunc) {
+func (db *sQLServer) JoinTableQuery(tableName string, queryFunc queryFunc) {
 	db.addQueryTableJoin("JOIN", tableName, queryFunc)
 }
 
-func (db *SQLServer) LeftJoinTableQuery(tableName string, queryFunc QueryFunc) {
+func (db *sQLServer) LeftJoinTableQuery(tableName string, queryFunc queryFunc) {
 	db.addQueryTableJoin("LEFT JOIN", tableName, queryFunc)
 }
 
-func (db *SQLServer) addQuerySubJoin(joinType string, subSql DB, alias string, queryFunc QueryFunc) {
+func (db *sQLServer) addQuerySubJoin(joinType string, subSql DB, alias string, queryFunc queryFunc) {
 	q := Query{}
 	queryFunc(&q)
 	tableName := fmt.Sprintf("(%s) %s", subSql.GenerateSelect(), db.checkReserved(alias))
@@ -375,27 +375,27 @@ func (db *SQLServer) addQuerySubJoin(joinType string, subSql DB, alias string, q
 	})
 }
 
-func (db *SQLServer) JoinSubQuery(subSql DB, alias string, queryFunc QueryFunc) {
+func (db *sQLServer) JoinSubQuery(subSql DB, alias string, queryFunc queryFunc) {
 	db.addQuerySubJoin("JOIN", subSql, alias, queryFunc)
 }
 
-func (db *SQLServer) LeftJoinSubQuery(subSql DB, alias string, queryFunc QueryFunc) {
+func (db *sQLServer) LeftJoinSubQuery(subSql DB, alias string, queryFunc queryFunc) {
 	db.addQuerySubJoin("LEFT JOIN", subSql, alias, queryFunc)
 }
 
-func (db *SQLServer) Where(field string, comparator string, value interface{}, escape bool) {
+func (db *sQLServer) Where(field string, comparator string, value interface{}, escape bool) {
 	db.query.Where(db.checkReserved(field), comparator, value, escape)
 }
 
-func (db *SQLServer) WhereNull(field string) {
+func (db *sQLServer) WhereNull(field string) {
 	db.query.WhereNull(db.checkReserved(field))
 }
 
-func (db *SQLServer) WhereNotNull(field string) {
+func (db *sQLServer) WhereNotNull(field string) {
 	db.query.WhereNotNull(db.checkReserved(field))
 }
 
-func (db *SQLServer) addWhereInList(inType string, field string, values []interface{}, escape bool) {
+func (db *sQLServer) addWhereInList(inType string, field string, values []interface{}, escape bool) {
 	if inType == "in" {
 		db.query.WhereInList(db.checkReserved(field), values, escape)
 	} else {
@@ -403,46 +403,46 @@ func (db *SQLServer) addWhereInList(inType string, field string, values []interf
 	}
 }
 
-func (db *SQLServer) WhereInList(field string, values []interface{}, escape bool) {
+func (db *sQLServer) WhereInList(field string, values []interface{}, escape bool) {
 	db.addWhereInList("in", db.checkReserved(field), values, escape)
 }
 
-func (db *SQLServer) WhereNotInList(field string, values []interface{}, escape bool) {
+func (db *sQLServer) WhereNotInList(field string, values []interface{}, escape bool) {
 	db.addWhereInList("not in", db.checkReserved(field), values, escape)
 }
 
-func (db *SQLServer) WhereInSub(field string, subSql DB) {
+func (db *sQLServer) WhereInSub(field string, subSql DB) {
 	db.query.WhereInSub(db.checkReserved(field), subSql)
 }
 
-func (db *SQLServer) WhereNotInSub(field string, subSql DB) {
+func (db *sQLServer) WhereNotInSub(field string, subSql DB) {
 	db.query.WhereNotInSub(db.checkReserved(field), subSql)
 }
 
-func (db *SQLServer) Or() {
+func (db *sQLServer) Or() {
 	db.query.Or()
 }
-func (db *SQLServer) And() {
+func (db *sQLServer) And() {
 	db.query.And()
 }
 
-func (db *SQLServer) OpenBracket() {
+func (db *sQLServer) OpenBracket() {
 	db.query.OpenBracket()
 }
 
-func (db *SQLServer) CloseBracket() {
+func (db *sQLServer) CloseBracket() {
 	db.query.CloseBracket()
 }
 
-func (db *SQLServer) LimitBy(number int) {
+func (db *sQLServer) LimitBy(number int) {
 	db.limitBy = number
 }
 
-func (db *SQLServer) OffsetBy(number int) {
+func (db *sQLServer) OffsetBy(number int) {
 	db.offsetBy = number
 }
 
-func (db *SQLServer) OrderBy(field string, direction string) {
+func (db *sQLServer) OrderBy(field string, direction string) {
 	direction = strings.ToUpper(direction)
 	if direction == "ASC" || direction == "DESC" {
 		db.ordering = append(db.ordering, orderBy{
@@ -453,14 +453,14 @@ func (db *SQLServer) OrderBy(field string, direction string) {
 
 }
 
-func (db *SQLServer) GroupBy(field ...string) {
+func (db *sQLServer) GroupBy(field ...string) {
 	for _, f := range field {
 		db.groupColumns = append(db.groupColumns, db.checkReserved(f))
 	}
 
 }
 
-func (db *SQLServer) GenerateSelect() string {
+func (db *sQLServer) GenerateSelect() string {
 	var params []interface{}
 	paramNames := []string{}
 	query := "SELECT "
@@ -509,7 +509,7 @@ func (db *SQLServer) GenerateSelect() string {
 	db.paramNames = paramNames
 	return query
 }
-func (db *SQLServer) GenerateInsert() string {
+func (db *sQLServer) GenerateInsert() string {
 	query := fmt.Sprintf("INSERT INTO %s ", db.table)
 	query += fmt.Sprintf(" (%s) VALUES ", strings.Join(db.insertColumns, ","))
 	if len(db.insertValues) > 0 {
@@ -524,7 +524,7 @@ func (db *SQLServer) GenerateInsert() string {
 	query += "; select isNull(SCOPE_IDENTITY(), -1);"
 	return query
 }
-func (db *SQLServer) GenerateUpdate() string {
+func (db *sQLServer) GenerateUpdate() string {
 	query := fmt.Sprintf("UPDATE %s SET ", db.table)
 	query += strings.Join(db.updateValues, ",")
 	if len(db.query.wheres) > 0 {
@@ -536,7 +536,7 @@ func (db *SQLServer) GenerateUpdate() string {
 	return query
 }
 
-func (db *SQLServer) GenerateDelete() string {
+func (db *sQLServer) GenerateDelete() string {
 	query := fmt.Sprintf("DELETE FROM %s ", db.table)
 	if len(db.query.wheres) > 0 {
 		whereStr, newParams, newParamNames := db.query.ApplyWheres()
@@ -561,7 +561,7 @@ func (result *sqlServerResult) LastInsertId() (int64, error) {
 	return result.lastInsertId, result.err
 }
 
-func (db *SQLServer) Save() (sql.Result, error) {
+func (db *sQLServer) Save() (sql.Result, error) {
 	var query string
 	sqlResult := sqlServerResult{}
 	if len(db.insertValues) > 0 || len(db.multiInsertValues) > 0 {
@@ -591,12 +591,12 @@ func (db *SQLServer) Save() (sql.Result, error) {
 	}
 	return &sqlResult, nil
 }
-func (db *SQLServer) Fetch() (*sql.Rows, context.CancelFunc, error) {
+func (db *sQLServer) Fetch() (*sql.Rows, context.CancelFunc, error) {
 
 	return db.executeQuery(db.GenerateSelect())
 }
 
-func (db *SQLServer) FetchConcurrent() (successChannel chan bool, startRowsChannel chan bool, rowChannel chan *sql.Rows, nextChannel chan bool, completeChannel chan bool, cancelChannel chan bool, errorChannel chan error) {
+func (db *sQLServer) FetchConcurrent() (successChannel chan bool, startRowsChannel chan bool, rowChannel chan *sql.Rows, nextChannel chan bool, completeChannel chan bool, cancelChannel chan bool, errorChannel chan error) {
 	successChannel = make(chan bool)
 	startRowsChannel = make(chan bool)
 	rowChannel = make(chan *sql.Rows)
@@ -608,11 +608,11 @@ func (db *SQLServer) FetchConcurrent() (successChannel chan bool, startRowsChann
 	return successChannel, startRowsChannel, rowChannel, nextChannel, completeChannel, cancelChannel, errorChannel
 }
 
-func (db *SQLServer) Delete() (sql.Result, error) {
+func (db *sQLServer) Delete() (sql.Result, error) {
 	return db.executeNonQuery(db.GenerateDelete())
 }
 
-func (db *SQLServer) concExecuteQuery(query string, successChannel chan bool, startRowsChannel chan bool, rowChan chan *sql.Rows, nextChan chan bool, completeChan chan bool, cancelChan chan bool, errorChan chan error) {
+func (db *sQLServer) concExecuteQuery(query string, successChannel chan bool, startRowsChannel chan bool, rowChan chan *sql.Rows, nextChan chan bool, completeChan chan bool, cancelChan chan bool, errorChan chan error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelFunc()
 	con := sqlServerConnections[db.databaseName]
@@ -663,7 +663,7 @@ func (db *SQLServer) concExecuteQuery(query string, successChannel chan bool, st
 	completeChan <- true
 }
 
-func (db *SQLServer) executeQuery(query string) (*sql.Rows, context.CancelFunc, error) {
+func (db *sQLServer) executeQuery(query string) (*sql.Rows, context.CancelFunc, error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
 	con := sqlServerConnections[db.databaseName]
 
@@ -693,7 +693,7 @@ func (db *SQLServer) executeQuery(query string) (*sql.Rows, context.CancelFunc, 
 	return results, cancelFunc, nil
 }
 
-func (db *SQLServer) executeNonQuery(query string) (sql.Result, error) {
+func (db *sQLServer) executeNonQuery(query string) (sql.Result, error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelFunc()
 	con := sqlServerConnections[db.databaseName]

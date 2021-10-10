@@ -22,9 +22,9 @@ func Open(database string) (DB, error) {
 	dbType := dbConfig.Type
 	switch dbType {
 	case "MySQL":
-		db = &MySQL{}
+		db = &mySQL{}
 	case "SQLServer":
-		db = &SQLServer{}
+		db = &sQLServer{}
 		db.SetParamPrefix("param")
 	}
 
