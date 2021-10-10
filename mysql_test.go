@@ -9,7 +9,15 @@ import (
 
 func init() {
 	SetConnections(map[string]Config{
-		"test": {
+		"mssql_test": {
+			Type:     "SQLServer",
+			Host:     "localhost",
+			Port:     1433,
+			Username: "sa",
+			Password: "SuperSecurePassword!",
+			Database: "test",
+		},
+		"mysql_test": {
 			Type:     "MySQL",
 			Host:     "localhost",
 			Port:     3306,
@@ -18,7 +26,7 @@ func init() {
 			Database: "test",
 		},
 	})
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		panic("no test database found")
 	}
@@ -258,7 +266,7 @@ func init() {
 }
 
 func TestSelect(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -287,7 +295,7 @@ func TestSelect(t *testing.T) {
 }
 
 func TestSelectBasicWhere(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -320,7 +328,7 @@ func TestSelectBasicWhere(t *testing.T) {
 }
 
 func TestSelectComplexWhere(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -364,7 +372,7 @@ func TestSelectComplexWhere(t *testing.T) {
 }
 
 func TestSelectWhereNull(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -399,7 +407,7 @@ func TestSelectWhereNull(t *testing.T) {
 }
 
 func TestSelectWhereNotNull(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -434,7 +442,7 @@ func TestSelectWhereNotNull(t *testing.T) {
 }
 
 func TestSelectWhereInList(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -470,7 +478,7 @@ func TestSelectWhereInList(t *testing.T) {
 }
 
 func TestSelectWhereNotInList(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -506,7 +514,7 @@ func TestSelectWhereNotInList(t *testing.T) {
 }
 
 func TestSelectWhereInSub(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -544,7 +552,7 @@ func TestSelectWhereInSub(t *testing.T) {
 }
 
 func TestSelectWhereNotInSub(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -582,7 +590,7 @@ func TestSelectWhereNotInSub(t *testing.T) {
 }
 
 func TestInsertAndDelete(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -607,7 +615,7 @@ func TestInsertAndDelete(t *testing.T) {
 }
 
 func TestInsertMultiAndDelete(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -645,7 +653,7 @@ func TestInsertMultiAndDelete(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -662,7 +670,7 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestStandardJoin(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -692,7 +700,7 @@ func TestStandardJoin(t *testing.T) {
 }
 
 func TestStandardLeftJoin(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -729,7 +737,7 @@ func TestStandardLeftJoin(t *testing.T) {
 }
 
 func TestQueryJoin(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -767,7 +775,7 @@ func TestQueryJoin(t *testing.T) {
 }
 
 func TestSubJoin(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -807,7 +815,7 @@ func TestSubJoin(t *testing.T) {
 }
 
 func TestOrdering(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -830,7 +838,7 @@ func TestOrdering(t *testing.T) {
 }
 
 func TestGrouping(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -852,7 +860,7 @@ func TestGrouping(t *testing.T) {
 }
 
 func TestLimitOffset(t *testing.T) {
-	db, err := Open("test")
+	db, err := Open("mysql_test")
 	if err != nil {
 		t.Fatalf("Failed opening database, got %s", err.Error())
 	}
@@ -905,7 +913,7 @@ func TestLimitOffset(t *testing.T) {
 }
 
 func TestConcurrentFetch(t *testing.T) {
-	db, _ := Open("test")
+	db, _ := Open("mysql_test")
 	db.Table("users")
 	db.Cols([]string{
 		"id",
@@ -946,7 +954,7 @@ func joinErrors(errors []error) string {
 }
 
 func TestConcurrentMultiFetch(t *testing.T) {
-	db1, _ := Open("test")
+	db1, _ := Open("mysql_test")
 	db1.Table("users")
 	db1.Cols([]string{
 		"id",
@@ -1075,7 +1083,7 @@ func runConcurrent() {
 
 	queries := []DB{}
 	for i := 0; i < 20; i++ {
-		db, _ := Open("test")
+		db, _ := Open("mysql_test")
 		db.Table("users")
 		db.Cols([]string{
 			"id",
@@ -1118,7 +1126,7 @@ func runConcurrent() {
 
 func runNonConcurrent() {
 	for i := 0; i < 20; i++ {
-		db, _ := Open("test")
+		db, _ := Open("mysql_test")
 		db.Table("users")
 		db.Cols([]string{
 			"id",
