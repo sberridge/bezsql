@@ -28,7 +28,7 @@ func Open(database string) (DB, error) {
 		db.SetParamPrefix("param")
 	}
 
-	_, err := db.Connect(database, dbConfig)
+	_, err := db.connect(database, dbConfig)
 	if err != nil {
 		fmt.Println(err.Error())
 		return nil, err

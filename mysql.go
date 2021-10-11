@@ -10,8 +10,6 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-var mysqlConnections map[string]*sql.DB = make(map[string]*sql.DB)
-
 type mySQL struct {
 	databaseName      string
 	usedConfig        Config
@@ -113,11 +111,11 @@ func (db *mySQL) Table(table string) {
 	db.table = table
 }
 
-func (db *mySQL) GetParams() []interface{} {
+func (db *mySQL) getParams() []interface{} {
 	return db.params
 }
 
-func (db *mySQL) GetParamNames() []string {
+func (db *mySQL) getParamNames() []string {
 	return db.paramNames
 }
 
@@ -171,7 +169,7 @@ func (db *mySQL) Count(col string, alias string) string {
 
 func (db *mySQL) NewQuery() (DB, error) {
 	newDB := mySQL{}
-	_, err := newDB.Connect(db.databaseName, db.usedConfig)
+	_, err := newDB.connect(db.databaseName, db.usedConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +178,7 @@ func (db *mySQL) NewQuery() (DB, error) {
 
 func (db *mySQL) Clone() (DB, error) {
 	newDB := mySQL{}
-	_, err := newDB.Connect(db.databaseName, db.usedConfig)
+	_, err := newDB.connect(db.databaseName, db.usedConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -214,16 +212,16 @@ func (db *mySQL) openConnection() (*sql.DB, error) {
 	return odb, err
 }
 
-func (db *mySQL) Connect(databaseName string, config Config) (bool, error) {
+func (db *mySQL) connect(databaseName string, config Config) (bool, error) {
 	db.databaseName = databaseName
 	db.usedConfig = config
-	if _, exists := mysqlConnections[databaseName]; !exists {
+	if _, exists := openConnections[databaseName]; !exists {
 
 		dbCon, err := db.openConnection()
 		if err != nil {
 			return false, err
 		}
-		mysqlConnections[databaseName] = dbCon
+		openConnections[databaseName] = dbCon
 	}
 
 	return true, nil
@@ -317,7 +315,7 @@ func (db *mySQL) addSubJoin(joinType string, subSql DB, alias string, primaryKey
 	q := Query{}
 	q.On(db.checkReserved(primaryKey), "=", db.checkReserved(foreignKey), false)
 	tableName := fmt.Sprintf("(%s) %s", subSql.GenerateSelect(), db.checkReserved(alias))
-	params := subSql.GetParams()
+	params := subSql.getParams()
 	db.joins = append(db.joins, join{
 		Type:   joinType,
 		Table:  tableName,
@@ -354,7 +352,7 @@ func (db *mySQL) addQuerySubJoin(joinType string, subSql DB, alias string, query
 	q := Query{}
 	queryFunc(&q)
 	tableName := fmt.Sprintf("(%s) %s", subSql.GenerateSelect(), db.checkReserved(alias))
-	params := subSql.GetParams()
+	params := subSql.getParams()
 	db.joins = append(db.joins, join{
 		Type:   joinType,
 		Table:  tableName,
@@ -559,7 +557,7 @@ func (db *mySQL) Delete() (sql.Result, error) {
 func (db *mySQL) concExecuteQuery(query string, successChannel chan bool, startRowsChannel chan bool, rowChan chan *sql.Rows, nextChan chan bool, completeChan chan bool, cancelChan chan bool, errorChan chan error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelFunc()
-	con := mysqlConnections[db.databaseName]
+	con := openConnections[db.databaseName]
 
 	if db.parallel {
 		newCon, err := db.openConnection()
@@ -603,7 +601,7 @@ func (db *mySQL) concExecuteQuery(query string, successChannel chan bool, startR
 
 func (db *mySQL) executeQuery(query string) (*sql.Rows, context.CancelFunc, error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
-	con := mysqlConnections[db.databaseName]
+	con := openConnections[db.databaseName]
 
 	if db.parallel {
 		newCon, err := db.openConnection()
@@ -628,7 +626,7 @@ func (db *mySQL) executeQuery(query string) (*sql.Rows, context.CancelFunc, erro
 func (db *mySQL) executeNonQuery(query string) (sql.Result, error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelFunc()
-	con := mysqlConnections[db.databaseName]
+	con := openConnections[db.databaseName]
 
 	if db.parallel {
 		newCon, err := db.openConnection()

@@ -116,8 +116,8 @@ func (q *Query) WhereNotInList(field string, values []interface{}, escape bool) 
 
 func (q *Query) addWhereInSub(inType string, field string, subQuery DB) {
 	valueString := fmt.Sprintf(" (%s) ", subQuery.GenerateSelect())
-	params := subQuery.GetParams()
-	paramNames := subQuery.GetParamNames()
+	params := subQuery.getParams()
+	paramNames := subQuery.getParamNames()
 	q.wheres = append(q.wheres, where{
 		Type:       "where",
 		Field:      field,

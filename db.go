@@ -6,7 +6,7 @@ import (
 )
 
 type DB interface {
-	Connect(databaseName string, config Config) (bool, error)
+	connect(databaseName string, config Config) (bool, error)
 	DoesTableExist(table string) (bool, error)
 	DoesColumnExist(table string, field string) (bool, error)
 	SetParamPrefix(prefix string)
@@ -22,8 +22,8 @@ type DB interface {
 	Update(values map[string]interface{}, escape bool)
 	Cols(cols []string)
 	Count(col string, alias string) string
-	GetParams() []interface{}
-	GetParamNames() []string
+	getParams() []interface{}
+	getParamNames() []string
 	GenerateSelect() string
 	GenerateInsert() string
 	GenerateUpdate() string

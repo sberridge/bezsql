@@ -1,6 +1,11 @@
 package bezsql
 
-import "strings"
+import (
+	"database/sql"
+	"strings"
+)
+
+var openConnections map[string]*sql.DB = make(map[string]*sql.DB)
 
 type queryFunc func(*Query)
 

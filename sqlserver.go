@@ -10,8 +10,6 @@ import (
 	_ "github.com/denisenkom/go-mssqldb"
 )
 
-var sqlServerConnections map[string]*sql.DB = make(map[string]*sql.DB)
-
 type sQLServer struct {
 	databaseName      string
 	usedConfig        Config
@@ -113,11 +111,11 @@ func (db *sQLServer) Table(table string) {
 	db.table = table
 }
 
-func (db *sQLServer) GetParams() []interface{} {
+func (db *sQLServer) getParams() []interface{} {
 	return db.params
 }
 
-func (db *sQLServer) GetParamNames() []string {
+func (db *sQLServer) getParamNames() []string {
 	return db.paramNames
 }
 
@@ -172,7 +170,7 @@ func (db *sQLServer) Count(col string, alias string) string {
 func (db *sQLServer) NewQuery() (DB, error) {
 	newDB := sQLServer{}
 	newDB.SetParamPrefix("param")
-	_, err := newDB.Connect(db.databaseName, db.usedConfig)
+	_, err := newDB.connect(db.databaseName, db.usedConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +179,7 @@ func (db *sQLServer) NewQuery() (DB, error) {
 
 func (db *sQLServer) Clone() (DB, error) {
 	newDB := sQLServer{}
-	_, err := newDB.Connect(db.databaseName, db.usedConfig)
+	_, err := newDB.connect(db.databaseName, db.usedConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -211,16 +209,16 @@ func (db *sQLServer) openConnection() (*sql.DB, error) {
 	return odb, err
 }
 
-func (db *sQLServer) Connect(databaseName string, config Config) (bool, error) {
+func (db *sQLServer) connect(databaseName string, config Config) (bool, error) {
 	db.databaseName = databaseName
 	db.usedConfig = config
-	if _, exists := sqlServerConnections[databaseName]; !exists {
+	if _, exists := openConnections[databaseName]; !exists {
 
 		dbCon, err := db.openConnection()
 		if err != nil {
 			return false, err
 		}
-		sqlServerConnections[databaseName] = dbCon
+		openConnections[databaseName] = dbCon
 	}
 
 	return true, nil
@@ -326,7 +324,7 @@ func (db *sQLServer) addSubJoin(joinType string, subSql DB, alias string, primar
 	q := Query{}
 	q.On(db.checkReserved(primaryKey), "=", db.checkReserved(foreignKey), false)
 	tableName := fmt.Sprintf("(%s) %s", subSql.GenerateSelect(), db.checkReserved(alias))
-	params := subSql.GetParams()
+	params := subSql.getParams()
 	db.joins = append(db.joins, join{
 		Type:   joinType,
 		Table:  tableName,
@@ -364,8 +362,8 @@ func (db *sQLServer) addQuerySubJoin(joinType string, subSql DB, alias string, q
 	q := Query{}
 	queryFunc(&q)
 	tableName := fmt.Sprintf("(%s) %s", subSql.GenerateSelect(), db.checkReserved(alias))
-	params := subSql.GetParams()
-	paramNames := subSql.GetParamNames()
+	params := subSql.getParams()
+	paramNames := subSql.getParamNames()
 	db.joins = append(db.joins, join{
 		Type:       joinType,
 		Table:      tableName,
@@ -615,7 +613,7 @@ func (db *sQLServer) Delete() (sql.Result, error) {
 func (db *sQLServer) concExecuteQuery(query string, successChannel chan bool, startRowsChannel chan bool, rowChan chan *sql.Rows, nextChan chan bool, completeChan chan bool, cancelChan chan bool, errorChan chan error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelFunc()
-	con := sqlServerConnections[db.databaseName]
+	con := openConnections[db.databaseName]
 
 	if db.parallel {
 		newCon, err := db.openConnection()
@@ -665,7 +663,7 @@ func (db *sQLServer) concExecuteQuery(query string, successChannel chan bool, st
 
 func (db *sQLServer) executeQuery(query string) (*sql.Rows, context.CancelFunc, error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
-	con := sqlServerConnections[db.databaseName]
+	con := openConnections[db.databaseName]
 
 	if db.parallel {
 		newCon, err := db.openConnection()
@@ -696,7 +694,7 @@ func (db *sQLServer) executeQuery(query string) (*sql.Rows, context.CancelFunc, 
 func (db *sQLServer) executeNonQuery(query string) (sql.Result, error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelFunc()
-	con := sqlServerConnections[db.databaseName]
+	con := openConnections[db.databaseName]
 
 	if db.parallel {
 		newCon, err := db.openConnection()
