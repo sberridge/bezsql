@@ -167,6 +167,22 @@ func (db *mySQL) Count(col string, alias string) string {
 	return fmt.Sprintf("COUNT(%s) %s", db.checkReserved(col), db.checkReserved(alias))
 }
 
+func (db *mySQL) Sum(col string, alias string) string {
+	return fmt.Sprintf("SUM(%s) %s", db.checkReserved(col), db.checkReserved(alias))
+}
+
+func (db *mySQL) Avg(col string, alias string) string {
+	return fmt.Sprintf("AVG(%s) %s", db.checkReserved(col), db.checkReserved(alias))
+}
+
+func (db *mySQL) Max(col string, alias string) string {
+	return fmt.Sprintf("MAX(%s) %s", db.checkReserved(col), db.checkReserved(alias))
+}
+
+func (db *mySQL) Min(col string, alias string) string {
+	return fmt.Sprintf("MIN(%s) %s", db.checkReserved(col), db.checkReserved(alias))
+}
+
 func (db *mySQL) NewQuery() (DB, error) {
 	newDB := mySQL{}
 	_, err := newDB.connect(db.databaseName, db.usedConfig)
@@ -555,8 +571,7 @@ func (db *mySQL) Delete() (sql.Result, error) {
 }
 
 func (db *mySQL) concExecuteQuery(query string, successChannel chan bool, startRowsChannel chan bool, rowChan chan *sql.Rows, nextChan chan bool, completeChan chan bool, cancelChan chan bool, errorChan chan error) {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancelFunc()
+
 	con := openConnections[db.databaseName]
 
 	if db.parallel {
@@ -569,6 +584,9 @@ func (db *mySQL) concExecuteQuery(query string, successChannel chan bool, startR
 		con = newCon
 		defer con.Close()
 	}
+
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancelFunc()
 	results, err := con.QueryContext(ctx, query, db.params...)
 
 	if err != nil {
@@ -600,19 +618,20 @@ func (db *mySQL) concExecuteQuery(query string, successChannel chan bool, startR
 }
 
 func (db *mySQL) executeQuery(query string) (*sql.Rows, context.CancelFunc, error) {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
+
 	con := openConnections[db.databaseName]
 
 	if db.parallel {
 		newCon, err := db.openConnection()
 		if err != nil {
 			fmt.Println(err)
-			defer cancelFunc()
 			return nil, nil, err
 		}
 		con = newCon
 		defer con.Close()
 	}
+
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
 	results, err := con.QueryContext(ctx, query, db.params...)
 
 	if err != nil {

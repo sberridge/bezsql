@@ -167,6 +167,22 @@ func (db *sQLServer) Count(col string, alias string) string {
 	return fmt.Sprintf("COUNT(%s) %s", db.checkReserved(col), db.checkReserved(alias))
 }
 
+func (db *sQLServer) Sum(col string, alias string) string {
+	return fmt.Sprintf("SUM(%s) %s", db.checkReserved(col), db.checkReserved(alias))
+}
+
+func (db *sQLServer) Avg(col string, alias string) string {
+	return fmt.Sprintf("AVG(%s) %s", db.checkReserved(col), db.checkReserved(alias))
+}
+
+func (db *sQLServer) Max(col string, alias string) string {
+	return fmt.Sprintf("MAX(%s) %s", db.checkReserved(col), db.checkReserved(alias))
+}
+
+func (db *sQLServer) Min(col string, alias string) string {
+	return fmt.Sprintf("MIN(%s) %s", db.checkReserved(col), db.checkReserved(alias))
+}
+
 func (db *sQLServer) NewQuery() (DB, error) {
 	newDB := sQLServer{}
 	newDB.SetParamPrefix("param")
@@ -611,8 +627,7 @@ func (db *sQLServer) Delete() (sql.Result, error) {
 }
 
 func (db *sQLServer) concExecuteQuery(query string, successChannel chan bool, startRowsChannel chan bool, rowChan chan *sql.Rows, nextChan chan bool, completeChan chan bool, cancelChan chan bool, errorChan chan error) {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancelFunc()
+
 	con := openConnections[db.databaseName]
 
 	if db.parallel {
@@ -631,6 +646,8 @@ func (db *sQLServer) concExecuteQuery(query string, successChannel chan bool, st
 		namedParameters = append(namedParameters, sql.Named(db.paramNames[i], param))
 	}
 
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancelFunc()
 	results, err := con.QueryContext(ctx, query, namedParameters...)
 
 	if err != nil {
@@ -662,14 +679,13 @@ func (db *sQLServer) concExecuteQuery(query string, successChannel chan bool, st
 }
 
 func (db *sQLServer) executeQuery(query string) (*sql.Rows, context.CancelFunc, error) {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
+
 	con := openConnections[db.databaseName]
 
 	if db.parallel {
 		newCon, err := db.openConnection()
 		if err != nil {
 			fmt.Println(err)
-			defer cancelFunc()
 			return nil, nil, err
 		}
 		con = newCon
@@ -681,6 +697,7 @@ func (db *sQLServer) executeQuery(query string) (*sql.Rows, context.CancelFunc, 
 		namedParameters = append(namedParameters, sql.Named(db.paramNames[i], param))
 	}
 
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
 	results, err := con.QueryContext(ctx, query, namedParameters...)
 
 	if err != nil {

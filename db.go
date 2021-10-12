@@ -22,6 +22,10 @@ type DB interface {
 	Update(values map[string]interface{}, escape bool)
 	Cols(cols []string)
 	Count(col string, alias string) string
+	Sum(col string, alias string) string
+	Avg(col string, alias string) string
+	Max(col string, alias string) string
+	Min(col string, alias string) string
 	getParams() []interface{}
 	getParamNames() []string
 	GenerateSelect() string

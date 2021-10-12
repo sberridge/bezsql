@@ -386,6 +386,183 @@ func TestSQLServerSelectComplexWhere(t *testing.T) {
 	}
 }
 
+func TestSQLServerAggregate(t *testing.T) {
+	countdb, err := Open("sqlserver_test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	countdb.Table("users")
+	countdb.Cols([]string{
+		countdb.Count("id", "counted"),
+	})
+
+	sumdb, _ := countdb.NewQuery()
+	sumdb.Table("cities")
+	sumdb.Cols([]string{
+		sumdb.Sum("id", "summed"),
+	})
+
+	avgdb, _ := countdb.NewQuery()
+	avgdb.Table("users")
+	avgdb.Cols([]string{
+		avgdb.Avg("gender_id", "avged"),
+	})
+
+	mindb, _ := countdb.NewQuery()
+	mindb.Table("users")
+	mindb.Cols([]string{
+		mindb.Min("date_of_birth", "youngest"),
+	})
+
+	maxdb, _ := countdb.NewQuery()
+	maxdb.Table("users")
+	maxdb.Cols([]string{
+		maxdb.Max("date_of_birth", "oldest"),
+	})
+
+	results := ConcurrentFetch(countdb, sumdb, avgdb, mindb, maxdb)
+
+	for i, res := range results {
+		switch i {
+		case 0:
+			//count
+			if len(res.Errors) > 0 {
+				t.Fatalf("Fetching count failed with errors %s", joinErrors(res.Errors))
+			} else {
+				totalRows := 0
+				res.StartRowsChannel <- true
+				done := false
+				for {
+					select {
+					case row := <-res.RowChannel:
+						totalRows++
+						var count int
+						row.Scan(&count)
+						if count == 0 {
+							t.Fatal("Count returned 0")
+						}
+						res.NextChannel <- true
+
+					case <-res.CompleteChannel:
+						done = true
+					}
+					if done {
+						break
+					}
+				}
+			}
+		case 1:
+			//sum
+			if len(res.Errors) > 0 {
+				t.Fatalf("Fetching sum failed with errors %s", joinErrors(res.Errors))
+			} else {
+				totalRows := 0
+				res.StartRowsChannel <- true
+				done := false
+				for {
+					select {
+					case row := <-res.RowChannel:
+						totalRows++
+						var sum int
+						row.Scan(&sum)
+						if sum == 0 {
+							t.Fatal("Sum returned 0")
+						}
+						res.NextChannel <- true
+
+					case <-res.CompleteChannel:
+						done = true
+					}
+					if done {
+						break
+					}
+				}
+			}
+		case 2:
+			//avg
+			if len(res.Errors) > 0 {
+				t.Fatalf("Fetching avg failed with errors %s", joinErrors(res.Errors))
+			} else {
+				totalRows := 0
+				res.StartRowsChannel <- true
+				done := false
+				for {
+					select {
+					case row := <-res.RowChannel:
+						totalRows++
+						var avg float32
+						row.Scan(&avg)
+						if avg == 0 {
+							t.Fatal("Avg returned 0")
+						}
+						res.NextChannel <- true
+
+					case <-res.CompleteChannel:
+						done = true
+					}
+					if done {
+						break
+					}
+				}
+			}
+		case 3:
+			//min
+			if len(res.Errors) > 0 {
+				t.Fatalf("Fetching min failed with errors %s", joinErrors(res.Errors))
+			} else {
+				totalRows := 0
+				res.StartRowsChannel <- true
+				done := false
+				for {
+					select {
+					case row := <-res.RowChannel:
+						totalRows++
+						var min string
+						row.Scan(&min)
+						if min != "1967-03-12T00:00:00Z" {
+							t.Fatalf("Failed fetching min date of birth, got %s", min)
+						}
+						res.NextChannel <- true
+
+					case <-res.CompleteChannel:
+						done = true
+					}
+					if done {
+						break
+					}
+				}
+			}
+		case 4:
+			//max
+			if len(res.Errors) > 0 {
+				t.Fatalf("Fetching max failed with errors %s", joinErrors(res.Errors))
+			} else {
+				totalRows := 0
+				res.StartRowsChannel <- true
+				done := false
+				for {
+					select {
+					case row := <-res.RowChannel:
+						totalRows++
+						var max string
+						row.Scan(&max)
+						if max != "1999-08-27T00:00:00Z" {
+							t.Fatalf("Failed fetching max date of birth, got %s", max)
+						}
+						res.NextChannel <- true
+
+					case <-res.CompleteChannel:
+						done = true
+					}
+					if done {
+						break
+					}
+				}
+			}
+		}
+	}
+}
+
 func TestSQLServerSelectWhereNull(t *testing.T) {
 	db, err := Open("sqlserver_test")
 	if err != nil {

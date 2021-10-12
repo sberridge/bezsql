@@ -265,9 +265,31 @@ db.CloseBracket()
 //WHERE (field = ? OR field2 = ?) AND (field3 = ? OR field4 = ?)
 ```
 
-### Grouping Results
+### Aggregating Results
 
-Grouping is done with the GroupBy method.
+There are a number of methods available to aggregate results, these are:
+
+* Sum
+* Count
+* Avg
+* Min
+* Max
+
+These methods are used when defining the columns to be selected, e.g.
+
+```go
+db.Table("charges")
+db.Cols([]string{
+    //all aggregate functions accept a field name and an alias
+    db.Sum("amount", "total_amount"),
+    "client_id",
+})
+db.GroupBy("client_id")
+```
+
+#### Grouping Results
+
+As shown above, grouping is done with the GroupBy method.
 
 ```go
 // variadic function accepting any number of group fields
