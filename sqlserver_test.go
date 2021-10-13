@@ -386,6 +386,41 @@ func TestSQLServerSelectComplexWhere(t *testing.T) {
 	}
 }
 
+func TestSQLServerSubQuery(t *testing.T) {
+	usersdb, err := Open("sqlserver_test")
+	if err != nil {
+		t.Fatalf("Failed opening database, got %s", err.Error())
+	}
+	usersdb.Table("users")
+	usersdb.Cols([]string{
+		"id",
+	})
+
+	mainDb, _ := usersdb.NewQuery()
+	mainDb.TableSub(usersdb, "my_users")
+	mainDb.Cols([]string{
+		"my_users.id",
+	})
+	mainDb.Where("my_users.id", "=", 1, true)
+	res, close, err := mainDb.Fetch()
+	if err != nil {
+		t.Fatalf("Failed running sub query, got %s", err.Error())
+	}
+	defer close()
+	totalRows := 0
+	for res.Next() {
+		totalRows++
+		var id int
+		res.Scan(&id)
+		if id != 1 {
+			t.Fatalf("Expected id 1, got %d", id)
+		}
+	}
+	if totalRows == 0 {
+		t.Fatalf("No results returned")
+	}
+}
+
 func TestSQLServerAggregate(t *testing.T) {
 	countdb, err := Open("sqlserver_test")
 	if err != nil {

@@ -15,6 +15,7 @@ type DB interface {
 	NewQuery() (DB, error)
 	Clone() (DB, error)
 	Table(table string)
+	TableSub(subDb DB, table string)
 	RawQuery(query string, params []interface{}) (*sql.Rows, context.CancelFunc, error)
 	RawNonQuery(query string, params []interface{}) (sql.Result, error)
 	Insert(values map[string]interface{}, escape bool)

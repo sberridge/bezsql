@@ -111,6 +111,12 @@ func (db *mySQL) Table(table string) {
 	db.table = table
 }
 
+func (db *mySQL) TableSub(subDb DB, alias string) {
+	db.table = fmt.Sprintf(" (%s) %s ", subDb.GenerateSelect(), db.checkReserved(alias))
+	db.params = append(db.params, subDb.getParams()...)
+	db.paramNames = append(db.paramNames, subDb.getParamNames()...)
+}
+
 func (db *mySQL) getParams() []interface{} {
 	return db.params
 }
